@@ -1,8 +1,14 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useTable } from "react-table";
+import Modal from "react-modal";
 
-function Table({ data }) {
+Modal.setAppElement('#root'); // Set the app element for accessibility
+
+function Table({ data, onUpdateData }) {
   const [showMore, setShowMore] = useState(false); // State to toggle "Show More" / "Show Less"
+  const [isEditing, setIsEditing] = useState(false); // State to handle editing
+  const [editRowIndex, setEditRowIndex] = useState(null); // Track the index of the row being edited
+  const [editRowData, setEditRowData] = useState({}); // Store the data of the row being edited
 
   // Define columns for the react-table
   const columns = useMemo(
@@ -14,7 +20,19 @@ function Table({ data }) {
       { Header: "Credit/Debit", accessor: "creditDebit" },
       { Header: "Description", accessor: "description" },
       { Header: "Amount ($)", accessor: "amount" },
-      { Header: "Balance ($)", accessor: "balance" }
+      { Header: "Balance ($)", accessor: "balance" },
+      {
+        Header: "Actions",
+        accessor: "actions",
+        Cell: ({ row }) => (
+          <button
+            onClick={() => handleEdit(row.index)}
+            className="text-blue-500 hover:underline"
+          >
+            Edit
+          </button>
+        ),
+      },
     ],
     []
   );
@@ -27,7 +45,7 @@ function Table({ data }) {
     setShowMore(!showMore);
   };
 
-  // Decide how many rows to display based on the state of `showMore`
+  // Decide how many rows to display based on the state of showMore
   const dataToDisplay = showMore ? data : data?.slice(0, rowLimit);
 
   // Use the react-table hook
@@ -36,10 +54,32 @@ function Table({ data }) {
     data: dataToDisplay || [],
   });
 
+  const handleEdit = (index) => {
+    setEditRowIndex(index);
+    setEditRowData(data[index]); // Get the data of the row being edited
+    setIsEditing(true); // Open the edit form
+    document.body.style.overflow = 'hidden'; // Prevent background scroll
+  };
+
+  const handleUpdate = () => {
+    const updatedData = [...data]; // Create a copy of the data
+    updatedData[editRowIndex] = editRowData; // Replace the old data with the updated data
+    onUpdateData(updatedData); // Call the parent to update data
+    setIsEditing(false); // Close the edit form
+    setEditRowIndex(null); // Reset edit row index
+    setEditRowData({}); // Reset edit row data
+    document.body.style.overflow = 'auto'; // Restore background scroll
+  };
+
+  const handleClose = () => {
+    setIsEditing(false); // Close the edit form
+    document.body.style.overflow = 'auto'; // Restore background scroll
+  };
+
   // Function to export table data to CSV
   const exportToCSV = () => {
     const csvRows = [];
-    
+
     // Get headers
     const headers = columns.map(column => column.Header);
     csvRows.push(headers.join(','));
@@ -120,6 +160,48 @@ function Table({ data }) {
           </button>
         </div>
       )}
+
+      {/* Edit Form in Modal */}
+      <Modal
+        isOpen={isEditing}
+        onRequestClose={handleClose} // Close function now handles scroll restoration
+        contentLabel="Edit Transaction"
+        className="fixed inset-0 flex items-center justify-center z-50"
+        overlayClassName="fixed inset-0 bg-black bg-opacity-50 backdrop-filter backdrop-blur-sm" // Changed backdrop blur to sm
+      >
+        <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-[90vw] max-w-lg">
+          <h3 className="text-lg font-semibold text-gray-200">Edit Transaction</h3>
+          <form className="space-y-4">
+            {Object.keys(editRowData).map((key) => (
+              <div key={key}>
+                <label className="block text-sm text-white">{key.replace(/([A-Z])/g, ' $1')}</label>
+                <input
+                  type="text"
+                  value={editRowData[key]}
+                  onChange={(e) => setEditRowData({ ...editRowData, [key]: e.target.value })}
+                  className="block w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md text-white"
+                />
+              </div>
+            ))}
+            <div className="flex justify-between">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdate}
+                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+              >
+                Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
+      </Modal>
     </div>
   );
 }
