@@ -1,25 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useTable } from "react-table";
 
-// Utility function to convert data to CSV and trigger download
-const exportToCSV = (data, columns) => {
-  const headers = columns.map((col) => col.Header).join(",");
-  const rows = data.map((row) =>
-    columns.map((col) => row[col.accessor]).join(",")
-  );
-
-  const csvContent = [headers, ...rows].join("\n");
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-  link.href = url;
-  link.setAttribute("download", "bank_statements.csv");
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
-
 function Table({ data }) {
   const [showMore, setShowMore] = useState(false); // State to toggle "Show More" / "Show Less"
 
@@ -54,6 +35,36 @@ function Table({ data }) {
     columns,
     data: dataToDisplay || [],
   });
+
+  // Function to export table data to CSV
+  const exportToCSV = () => {
+    const csvRows = [];
+    
+    // Get headers
+    const headers = columns.map(column => column.Header);
+    csvRows.push(headers.join(','));
+
+    // Get data rows
+    data.forEach(row => {
+      const values = columns.map(column => {
+        const value = row[column.accessor];
+        return `"${value}"`; // Wrap values in quotes
+      });
+      csvRows.push(values.join(','));
+    });
+
+    // Create a blob from the CSV string and trigger a download
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'bank_statement.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="mt-10 w-[90vw] bg-gray-800 p-6 rounded-lg shadow-lg overflow-x-auto">
@@ -98,15 +109,17 @@ function Table({ data }) {
         </div>
       )}
 
-      {/* Export as CSV Button */}
-      <div className="flex justify-end mt-4">
-        <button
-          onClick={() => exportToCSV(data, columns)}
-          className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-        >
-          Export as CSV
-        </button>
-      </div>
+      {/* Export to CSV Button */}
+      {data.length > 0 && (
+        <div className="flex justify-end mt-4">
+          <button
+            onClick={exportToCSV}
+            className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-200"
+          >
+            Export to CSV
+          </button>
+        </div>
+      )}
     </div>
   );
 }

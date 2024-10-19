@@ -1,87 +1,158 @@
+// Home.jsx
+import React, { useState } from "react";
+import Footer from "../components/Footer";
+import Header from "../components/Header";
+import Upload from "../components/Upload";
+import Table from "../components/Table";
+import useGemini from "../hooks/useGemini"; // Import the useGemini hook
+
+function Home() {
+  const { processText, loading, result, error } = useGemini(); // Using the hook
+  const [tableData, setTableData] = useState(null); // Store the extracted data for the table
+  const [extractedText, setExtractedText] = useState("");
+
+  const handleUploadData = (data) => {
+    console.log(data)
+    setTableData(data); // Set the table data from the Upload component
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen bg-gray-900 text-white">
+      <Header />
+      <div className="flex-1 flex flex-col items-center justify-center p-4">
+        <Upload 
+          onUploadData={handleUploadData} 
+          setExtractedText={setExtractedText} 
+          processText={processText} 
+          loading={loading}
+          result={result}
+          error={error}
+        />
+        {tableData && <Table data={tableData} />}
+      </div>
+      <Footer />
+    </div>
+  );
+}
+
+export default Home;
+
+
+// Home.jsx
 // import React, { useState } from "react";
 // import Footer from "../components/Footer";
 // import Header from "../components/Header";
-// import { useTable } from "react-table";
+// import Upload from "../components/Upload";
+// import Table from "../components/Table";
 
 // function Home() {
-//   const [file, setFile] = useState(null);
 //   const [tableData, setTableData] = useState(null); // Store the dummy data for the table
-//   const [showMore, setShowMore] = useState(false); // State to toggle "Show More" / "Show Less"
 
-//   const handleFileChange = (event) => {
-//     setFile(event.target.files[0]);
+//   const handleUploadData = (data) => {
+//     setTableData(data); // Set the table data from the Upload component
 //   };
-
-//   const generateDummyData = () => {
-//     const rows = [];
-//     const clientName = "John Doe"; // Dummy client name
-//     const bankName = "ABC Bank";   // Dummy bank name
-//     const accountNumber = `1234-5678-9012-3456`;  // Dummy account number
-    
-//     // Simulating 10 rows of data with random integers
-//     for (let i = 0; i < 10; i++) {
-//       const isCredit = Math.random() > 0.5; // Randomly decide if it's a credit or debit
-//       rows.push({
-//         clientName, 
-//         bankName, 
-//         accountNumber,
-//         transactionDate: `2024-10-${Math.floor(Math.random() * 30 + 1)}`, // Random date
-//         creditDebit: isCredit ? "Credit" : "Debit", // Randomly set credit or debit
-//         description: `Transaction ${i + 1}`, // Dummy description
-//         amount: Math.floor(Math.random() * 1000), // Random amounts between 0 and 999
-//         balance: Math.floor(Math.random() * 5000), // Random balances between 0 and 4999
-//       });
-//     }
-//     return rows;
-//   };
-
-//   const handleUpload = (event) => {
-//     event.preventDefault();
-
-//     // Simulating file upload logic
-//     console.log("Uploaded file:", file);
-
-//     // After the upload, generate dummy data for the table
-//     const data = generateDummyData();
-//     setTableData(data); // Set the table data
-//   };
-
-//   // Define columns for the react-table
-//   const columns = React.useMemo(
-//     () => [
-//       { Header: "Client Name", accessor: "clientName" },
-//       { Header: "Bank Name", accessor: "bankName" },
-//       { Header: "Account Number", accessor: "accountNumber" },
-//       { Header: "Transaction Date", accessor: "transactionDate" },
-//       { Header: "Credit/Debit", accessor: "creditDebit" },
-//       { Header: "Description", accessor: "description" },
-//       { Header: "Amount ($)", accessor: "amount" },
-//       { Header: "Balance ($)", accessor: "balance" }
-//     ],
-//     []
-//   );
-
-//   // Limit for initial rows display (show only 5 rows by default)
-//   const rowLimit = 5;
-
-//   // Toggle between showing all rows and limiting to 5 rows
-//   const toggleShowMore = () => {
-//     setShowMore(!showMore);
-//   };
-
-//   // Decide how many rows to display based on the state of `showMore`
-//   const dataToDisplay = showMore ? tableData : tableData?.slice(0, rowLimit);
-
-//   // Use the react-table hook
-//   const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } = useTable({
-//     columns,
-//     data: dataToDisplay || [],
-//   });
 
 //   return (
 //     <div className="flex flex-col min-h-screen bg-gray-900 text-white">
 //       <Header />
 //       <div className="flex-1 flex flex-col items-center justify-center p-4">
+//         <Upload onUploadData={handleUploadData} />
+//         {tableData && <Table data={tableData} />}
+//       </div>
+//       <Footer />
+//     </div>
+//   );
+// }
+
+// export default Home;
+
+
+
+// import { useState } from "react";
+// import Footer from "../components/Footer";
+// import Header from "../components/Header";
+// import useGemini from "../hooks/useGemini"; // Import the useGemini hook
+
+// function Home() {
+//   const [file, setFile] = useState(null);
+//   const [extractedText, setExtractedText] = useState("");
+//   const { processText, loading, result, error } = useGemini(); // Using the hook
+
+//   const handleFileChange = (event) => {
+//     setFile(event.target.files[0]);
+//   };
+
+//   const handleUpload = async (event) => {
+//     event.preventDefault();
+    
+//     // Simulate text extraction from the uploaded PDF
+//     // Replace this with actual extraction logic in the future
+//     // const simulatedExtractedText = "This is the simulated extracted text from the PDF.";
+//     const extractedData = `231 Valley Farms Street
+// Santa Monica, CA 90403 B3 BANK STATEMENT OF ACCOUNT
+// 83bank@domain.com
+// [Hl
+// Account Number: ~~ 111-234-567-890
+// StatementDate: 01/01/2021 Page 1 of 1
+// Period Covered: 12/01/2020 to 12/31/2020
+// Mr. John Doe. Opening Balance: 175,800.00
+// 1 STUART PLACE Total Credit Amount: 510,000.00 |
+// NORTHCUIFF EXTL TEST CITY Total Debit Amount: 494,000.00
+// Closing Balance: 191,800.00
+// Test Branch Account Type: Current Account
+// Number of Transactions: 8
+// Transactions
+// Date Description Credit Debit Balance
+// 12/01/2020 Payment - Credit Card 5,400.00 170,400.00
+// 12/05/2020 Payment - Insurance 3,000.00 167,400.00
+// 12/08/2020 Account Transfer In 500,000.00 667,400.00
+// 12/09/2020 Cheque Deposit 10,000.00 677,400.00
+// 12/10/2020 Payment - Electricity 1,500.00 675,900.00
+// 12/12/2020 Payment - Water Utility 600.00 675,300.00
+// 12/15/2020 Payment - Car Loan 403,500.00 271,800.00
+// 12/20/2020 Account Transfer Out 20,000.00 191,800.00
+// End of Transactions`; // Add more data as needed
+
+// const simulatedExtractedText = `I have extracted data from an image containing financial transactions, which may include various fields in different formats and irrelevant information. Please analyze the extracted data and identify the relevant financial table, typically including:
+
+// - Client Name
+// - Bank Name
+// - Account Number
+// - Transaction Date (mm/dd/yyyy)
+// - Credit/Debit
+// - Description
+// - Amount
+// - Balance
+
+// Focus only on structured data. Here is the extracted data:
+
+// ${extractedData}
+
+// Format the relevant transactions as follows:
+
+// Transaction 1:
+// Client Name: 
+// Bank Name: 
+// Account Number: 
+// Transaction Date: 
+// Credit/Debit: 
+// Description: 
+// Amount: 
+// Balance: 
+
+// Ignore any irrelevant text.`;
+
+
+//     setExtractedText(simulatedExtractedText); // Set the simulated text for testing
+
+//     // Call the Gemini API with the extracted text
+//     await processText(simulatedExtractedText);
+//   };
+
+//   return (
+//     <div className="flex flex-col min-h-screen bg-gray-900 text-white">
+//       <Header />
+//       <div className="flex-1 flex items-center justify-center">
 //         <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md">
 //           <h1 className="text-4xl font-bold mb-6 text-center text-gray-200">
 //             Upload PDF
@@ -101,55 +172,15 @@
 //               Upload
 //             </button>
 //           </form>
+
+//           {/* Display loading state, errors, and the result */}
+//           {loading && <p className="text-center mt-4">Processing...</p>}
+//           {error && <p className="text-red-500 mt-4">Error: {error}</p>}
+//           {result && <p className="mt-4">Gemini Response: {result}</p>}
+//           {extractedText && (
+//             <p className="mt-4">Extracted Text: {extractedText}</p>
+//           )}
 //         </div>
-
-//         {/* Conditionally render the table if tableData exists */}
-//         {tableData && (
-//           <div className="mt-10 w-[80vw] bg-gray-800 p-6 rounded-lg shadow-lg overflow-x-auto">
-//             <h2 className="text-2xl font-semibold mb-4 text-gray-200">
-//               Extracted Bank Statement
-//             </h2>
-//             <table {...getTableProps()} className="w-full table-auto text-left text-gray-200">
-//               <thead>
-//                 {headerGroups.map((headerGroup) => (
-//                   <tr {...headerGroup.getHeaderGroupProps()} className="bg-gray-700">
-//                     {headerGroup.headers.map((column) => (
-//                       <th {...column.getHeaderProps()} className="py-4 px-4 text-lg"> {/* Increased font size here */}
-//                         {column.render("Header")}
-//                       </th>
-//                     ))}
-//                   </tr>
-//                 ))}
-//               </thead>
-//               <tbody {...getTableBodyProps()}>
-//                 {rows.map((row) => {
-//                   prepareRow(row);
-//                   return (
-//                     <tr {...row.getRowProps()} className="border-t border-gray-600">
-//                       {row.cells.map((cell) => (
-//                         <td {...cell.getCellProps()} className="py-4 px-4 text-lg"> {/* Increased font size here */}
-//                           {cell.render("Cell")}
-//                         </td>
-//                       ))}
-//                     </tr>
-//                   );
-//                 })}
-//               </tbody>
-//             </table>
-
-//             {/* Show More / Show Less Button */}
-//             {tableData.length > rowLimit && (
-//               <div className="flex justify-end mt-4">
-//                 <button
-//                   onClick={toggleShowMore}
-//                   className="text-blue-500 hover:underline"
-//                 >
-//                   {showMore ? "Show Less" : "Show More"}
-//                 </button>
-//               </div>
-//             )}
-//           </div>
-//         )}
 //       </div>
 //       <Footer />
 //     </div>
@@ -157,36 +188,4 @@
 // }
 
 // export default Home;
-
-
-
-
-
-// Home.jsx
-import React, { useState } from "react";
-import Footer from "../components/Footer";
-import Header from "../components/Header";
-import Upload from "../components/Upload";
-import Table from "../components/Table";
-
-function Home() {
-  const [tableData, setTableData] = useState(null); // Store the dummy data for the table
-
-  const handleUploadData = (data) => {
-    setTableData(data); // Set the table data from the Upload component
-  };
-
-  return (
-    <div className="flex flex-col min-h-screen bg-gray-900 text-white">
-      <Header />
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
-        <Upload onUploadData={handleUploadData} />
-        {tableData && <Table data={tableData} />}
-      </div>
-      <Footer />
-    </div>
-  );
-}
-
-export default Home;
 
