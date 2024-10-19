@@ -5,6 +5,7 @@ import cors from 'cors';
 import userRoutes from './routes/user.route.js';
 import authRoutes from './routes/auth.route.js';
 import transactionRoutes from './routes/transaction.route.js';
+import statementRoutes from './routes/statement.route.js';
 import cookieParser from 'cookie-parser';
 
 import pdfRoutes from './routes/pdf.route.js'; // Import the OCR route
@@ -38,6 +39,7 @@ app.listen(3000, () => {
 app.use('/api/user', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/statements', statementRoutes);
 app.use('/api/ocr', pdfRoutes); // Use the OCR route
 
 app.use((err, req, res, next) => {

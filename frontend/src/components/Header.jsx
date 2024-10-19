@@ -11,8 +11,9 @@ import useSignOut from "../hooks/useSignOut";
 import { useSelector } from "react-redux";
 
 const navigation = [
-  { name: "Home", href: "/", current: true },
+  { name: "Upload", href: "/upload", current: true },
   { name: "About", href: "/about", current: false },
+  { name: "Dashboard", href: "/", current: false },
 ];
 
 function classNames(...classes) {

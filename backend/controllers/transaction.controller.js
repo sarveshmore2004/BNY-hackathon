@@ -11,16 +11,6 @@ export const createTransaction = async (req, res) => {
   }
 };
 
-// Get all transactions
-export const getTransactions = async (req, res) => {
-  try {
-    const transactions = await Transaction.find();
-    res.status(200).json(transactions);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
 // Update a transaction by ID
 export const updateTransaction = async (req, res) => {
   try {
