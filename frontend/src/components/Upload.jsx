@@ -11,32 +11,28 @@ function Upload({ onUploadData, setExtractedText, processText, loading, result, 
   const handleUpload = async (event) => {
     event.preventDefault();
     console.log("Uploaded file:", file);
-  
-    // Simulate text extraction from the uploaded PDF
-    const extractedData = `231 Valley Farms Street
-Santa Monica, CA 90403 B3 BANK STATEMENT OF ACCOUNT
-B3bank@domain.com
-Ex
-Account Number: 111-234-567-890
-Statement Date: 01/01/2021 Page 1 of 1
-Period Covered: 12/01/2020 to 12/31/2020
-Mr_John Doe Opening Balance: 175,800.00
-1 STUART PLACE Total Credit Amount: 510,000.00 |
-WNORTHCLIFF EXTL TEST CITY Total Debit Amount: 494,000.00
-Closing Balance: 191,800.00
-Test Branch Account Type: Current Account
-Number of Transactions: 8
-Transactions
-Date Description Credit Debit Balance
-12/01/2020 Payment - Credit Card 5,400.00 170,400.00
-12/05/2020 Payment - Insurance 3,000.00 167,400.00
-12/08/2020 Account Transfer In 500,000.00 667,400.00
-12/09/2020 Cheque Deposit 10,000.00 677,400.00
-12/10/2020 Payment - Electricity 1,500.00 675,500.00
-12/12/2020 Payment - Water Utility 600.00 675,300.00
-12/15/2020 Payment - Car Loan 403,500.00 271,800.00
-12/20/2020 Account Transfer Out 80,000.00 191,800.00
--— End of Transactions —-`; // Simulated extracted data
+
+    const formData = new FormData();
+    formData.append('pdf', file);
+    let response;
+    try {
+       response = await fetch('http://localhost:3000/api/ocr/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include', // Include cookies if needed
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+    } catch (error) {
+      console.error('Error uploading file:', error);
+    }
+
+
+      let extractedData = await response.json();
+extractedData=extractedData.text
 const simulatedExtractedText = `I have extracted data from an image containing financial transactions, which may include various fields in different formats and irrelevant information. Please analyze the extracted data and identify the relevant financial table, typically including:
 
 - Client Name
@@ -79,6 +75,7 @@ Now, return the relevant transactions in a structured JSON format like this:
 ]
 
 Return only the JSON.`;
+console.log(simulatedExtractedText)
 
   
     setExtractedText(simulatedExtractedText); // Set the simulated text for testing

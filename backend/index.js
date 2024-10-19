@@ -7,6 +7,10 @@ import authRoutes from './routes/auth.route.js';
 import transactionRoutes from './routes/transaction.route.js';
 import cookieParser from 'cookie-parser';
 
+import pdfRoutes from './routes/pdf.route.js'; // Import the OCR route
+
+
+
 dotenv.config();
 
 mongoose
@@ -34,6 +38,7 @@ app.listen(3000, () => {
 app.use('/api/user', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/ocr', pdfRoutes); // Use the OCR route
 
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
