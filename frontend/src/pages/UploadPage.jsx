@@ -6,10 +6,11 @@ import Upload from "../components/Upload";
 import Table from "../components/Table";
 import useGemini from "../hooks/useGemini"; // Import the useGemini hook
 
-function UploadPage() {
+function UploadPage({tableData,setTableData}) {
   const { processText, loading, result, error } = useGemini(); // Using the hook
-  const [tableData, setTableData] = useState(null); // Store the extracted data for the table
   const [extractedText, setExtractedText] = useState("");
+
+  console.log(tableData)
 
   const handleUploadData = (data) => {
     console.log(data)
