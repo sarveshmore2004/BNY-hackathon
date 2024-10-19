@@ -50,7 +50,7 @@ const uploadPdf = async (req, res) => {
             fs.unlinkSync(imagePath); // Delete image after extracting text
         }
 
-        res.json({ text: textResults.join('\n---\n') });
+        res.json({ pages: textResults });
     } catch (err) {
         console.error(err);
         res.status(500).send('Error processing the PDF.');
