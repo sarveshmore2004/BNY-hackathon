@@ -1,6 +1,24 @@
-// Table.jsx
 import React, { useMemo, useState } from "react";
 import { useTable } from "react-table";
+
+// Utility function to convert data to CSV and trigger download
+const exportToCSV = (data, columns) => {
+  const headers = columns.map((col) => col.Header).join(",");
+  const rows = data.map((row) =>
+    columns.map((col) => row[col.accessor]).join(",")
+  );
+
+  const csvContent = [headers, ...rows].join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.href = url;
+  link.setAttribute("download", "bank_statements.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
 function Table({ data }) {
   const [showMore, setShowMore] = useState(false); // State to toggle "Show More" / "Show Less"
@@ -79,6 +97,16 @@ function Table({ data }) {
           </button>
         </div>
       )}
+
+      {/* Export as CSV Button */}
+      <div className="flex justify-end mt-4">
+        <button
+          onClick={() => exportToCSV(data, columns)}
+          className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+        >
+          Export as CSV
+        </button>
+      </div>
     </div>
   );
 }
