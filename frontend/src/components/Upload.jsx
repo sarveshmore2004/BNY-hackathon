@@ -89,7 +89,7 @@ const handleUpload = async (event) => {
   let combinedContext = ""; // Initialize a variable to hold the combined context
 
   try {
-    response = await fetch('http://localhost:3000/api/ocr/upload', {
+    response = await fetch('/api/ocr/upload', {
       method: 'POST',
       body: formData,
       credentials: 'include',

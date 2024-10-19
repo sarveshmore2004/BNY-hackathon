@@ -1,4 +1,4 @@
-// Upload.jsx
+// UploadPage.jsx
 import React, { useState } from "react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
@@ -6,11 +6,10 @@ import Upload from "../components/Upload";
 import Table from "../components/Table";
 import useGemini from "../hooks/useGemini"; // Import the useGemini hook
 
-function UploadPage({tableData,setTableData}) {
+function UploadPage() {
   const { processText, loading, result, error } = useGemini(); // Using the hook
   const [extractedText, setExtractedText] = useState("");
-
-  console.log(tableData)
+  const [tableData, setTableData] = useState(null);
 
   const handleUploadData = (data) => {
     console.log(data)

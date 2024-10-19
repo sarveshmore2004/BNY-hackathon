@@ -30,7 +30,7 @@ export const createStatement = async (req, res) => {
   // Controller for retrieving all statements with transactions populated
   export const getStatements = async (req, res) => {
     try {
-      const statements = await Statement.find().populate('transactions');
+      const statements = await Statement.find();
       return res.status(200).json({ statements });
     } catch (error) {
       return res.status(500).json({ error: 'Server error while retrieving statements' });

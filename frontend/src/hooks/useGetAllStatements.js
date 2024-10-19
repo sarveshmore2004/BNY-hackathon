@@ -1,12 +1,11 @@
 // hooks/useGetAllStatements.js
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const useGetAllStatements = () => {
-  const [statements, setStatements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  // useEffect(() => {
     const fetchStatements = async () => {
       setLoading(true);
       try {
@@ -15,7 +14,7 @@ const useGetAllStatements = () => {
           throw new Error("Failed to fetch statements");
         }
         const data = await response.json();
-        setStatements(data);
+        return data;
       } catch (error) {
         setError(error.message);
       } finally {
@@ -23,10 +22,7 @@ const useGetAllStatements = () => {
       }
     };
 
-    fetchStatements();
-  }, []);
-
-  return { statements, loading, error };
+  return { fetchStatements, loading, error };
 };
 
 export default useGetAllStatements;

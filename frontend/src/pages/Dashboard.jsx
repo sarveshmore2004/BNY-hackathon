@@ -1,7 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "../components/Header";
 import { Footer } from "flowbite-react";
 import { Bar, Pie, Line, Doughnut, Scatter } from "react-chartjs-2";
+import useGetAllStatements from "../hooks/useGetAllStatements";
+import useGetStatementById from "../hooks/useGetStatementById";
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -29,16 +32,74 @@ ChartJS.register(
   Filler
 );
 
-function Dashboard({ tableData }) {
-  // Create a dummy list by copying tableData 10 times for this demo
-  
-  const dummyTables = Array(10).fill(tableData); // statements
+function Dashboard() {
+  const { fetchStatements , loading, error} = useGetAllStatements();
+  const [selectedStatementId, setSelectedStatementId] = useState(null);
+  const { statement: selectedTableData, loading: statementLoading, error: statementError } = useGetStatementById(selectedStatementId);
+  const [data,setData]=useState(null);
 
-  // State for tracking selected table
-  const [selectedTableIndex, setSelectedTableIndex] = useState(0);
+  useEffect(() => {
+    const getStatement=async()=>{
+      const data=await fetchStatements();
+      setData(data);
+      if(data) setSelectedStatementId(data.statements[0]._id);
+      console.log(selectedStatementId)
+    }
+    getStatement()
+  }, []);
 
-  // Conditional rendering for null or empty tableData
-  if (!tableData || tableData.length === 0) {
+  // Loading or error handling for fetching all statements
+  if (loading) {
+    return (
+      <div className="flex flex-col h-screen w-screen bg-gray-900 text-white">
+        <Header />
+        <div className="flex-grow flex items-center justify-center">
+          <p className="text-xl">Loading...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col h-screen w-screen bg-gray-900 text-white">
+        <Header />
+        <div className="flex-grow flex items-center justify-center">
+          <p className="text-xl">{error}</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Loading or error handling for fetching the selected statement by ID
+  if (statementLoading) {
+    return (
+      <div className="flex flex-col h-screen w-screen bg-gray-900 text-white">
+        <Header />
+        <div className="flex-grow flex items-center justify-center">
+          <p className="text-xl">Loading statement data...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (statementError) {
+    return (
+      <div className="flex flex-col h-screen w-screen bg-gray-900 text-white">
+        <Header />
+        <div className="flex-grow flex items-center justify-center">
+          <p className="text-xl">{statementError}</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Check if no data is available for statements
+  if (!data || data.statements.length === 0) {
     return (
       <div className="flex flex-col h-screen w-screen bg-gray-900 text-white">
         <Header />
@@ -50,22 +111,19 @@ function Dashboard({ tableData }) {
     );
   }
 
-  // Use the currently selected table's data
-  const selectedTableData = dummyTables[selectedTableIndex];
-
-  // Prepare data for charts (same as before)
+  // Prepare chart data
   const balanceChartData = {
-    labels: selectedTableData.map(statement => statement.clientName),
+    labels: selectedTableData.statement.transactions.map(statement => statement.clientName),
     datasets: [
       {
         label: 'Balance',
-        data: selectedTableData.map(statement => parseFloat(statement.balance)),
+        data: selectedTableData.statement.transactions.map(statement => parseFloat(statement.balance)),
         backgroundColor: 'rgba(75, 192, 192, 0.6)',
       },
     ],
   };
 
-  const creditDebitDistribution = selectedTableData.reduce(
+  const creditDebitDistribution = selectedTableData.statement.transactions.reduce(
     (acc, statement) => {
       acc[statement.creditDebit] = (acc[statement.creditDebit] || 0) + 1;
       return acc;
@@ -84,7 +142,7 @@ function Dashboard({ tableData }) {
     ],
   };
 
-  const transactionAmounts = selectedTableData.map(statement => ({
+  const transactionAmounts = selectedTableData.statement.transactions.map(statement => ({
     date: statement.transactionDate,
     amount: parseFloat(statement.amount),
   }));
@@ -103,11 +161,11 @@ function Dashboard({ tableData }) {
   };
 
   const doughnutChartData = {
-    labels: selectedTableData.map(statement => statement.clientName),
+    labels: selectedTableData.statement.transactions.map(statement => statement.clientName),
     datasets: [
       {
         label: 'Balance Distribution',
-        data: selectedTableData.map(statement => parseFloat(statement.balance)),
+        data: selectedTableData.statement.transactions.map(statement => parseFloat(statement.balance)),
         backgroundColor: [
           'rgba(255, 205, 86, 0.6)',
           'rgba(54, 162, 235, 0.6)',
@@ -120,11 +178,11 @@ function Dashboard({ tableData }) {
   };
 
   const horizontalBarData = {
-    labels: selectedTableData.map(statement => statement.clientName),
+    labels: selectedTableData.statement.transactions.map(statement => statement.clientName),
     datasets: [
       {
         label: 'Transaction Amounts',
-        data: selectedTableData.map(statement => parseFloat(statement.amount)),
+        data: selectedTableData.statement.transactions.map(statement => parseFloat(statement.amount)),
         backgroundColor: 'rgba(255, 159, 64, 0.6)',
       },
     ],
@@ -134,7 +192,7 @@ function Dashboard({ tableData }) {
     datasets: [
       {
         label: 'Transaction Amount vs Balance',
-        data: selectedTableData.map(statement => ({
+        data: selectedTableData.statement.transactions.map(statement => ({
           x: parseFloat(statement.balance),
           y: parseFloat(statement.amount),
         })),
@@ -162,21 +220,25 @@ function Dashboard({ tableData }) {
       <div className="flex-grow flex overflow-hidden">
         {/* Sidebar for tables */}
         <div className="bg-gray-800 p-4 w-1/4 overflow-y-auto">
-          <h2 className="text-xl font-bold mb-4">Tables</h2>
+          <h2 className="text-xl font-bold mb-4">Statements</h2>
           <ul>
-            {dummyTables.map((_, index) => (
-              <li
-                key={index}
-                onClick={() => setSelectedTableIndex(index)}
-                className={`cursor-pointer p-2 rounded mb-2 ${
-                  selectedTableIndex === index
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-700 text-gray-200'
-                }`}
-              >
-                Table {index + 1}
-              </li>
-            ))}
+          {data && data.statements.length > 0 && (
+              <ul>
+                {data.statements.map((statement, index) => (
+                  <li
+                    key={statement._id}
+                    onClick={() => setSelectedStatementId(statement._id)}
+                    className={`cursor-pointer p-2 rounded mb-2 ${
+                      selectedStatementId === statement._id
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-700 text-gray-200'
+                    }`}
+                  >
+                    Statement {index + 1}
+                  </li>
+                ))}
+              </ul>
+            )}
           </ul>
         </div>
 
@@ -200,19 +262,20 @@ function Dashboard({ tableData }) {
                 </tr>
               </thead>
               <tbody>
-                {selectedTableData.map((statement, index) => (
+                {selectedTableData.statement.transactions.map((statement, index) => (
                   <tr key={index} className="bg-gray-800 text-gray-200">
                     <td className="p-2 border">{statement.clientName}</td>
                     <td className="p-2 border">{statement.bankName}</td>
                     <td className="p-2 border">{statement.accountNumber}</td>
                     <td className="p-2 border">{statement.transactionDate}</td>
-                    <td className="p-2 border">{statement.creditDebit}</td>
+                    <td className="p-2 border">{statement.type}</td>
                     <td className="p-2 border">{statement.description}</td>
-                    <td className="p-2 border">{statement.amount}</td>
-                    <td className="p-2 border">{statement.balance}</td>
+                    <td className="p-2 border">${statement.amount}</td>
+                    <td className="p-2 border">${statement.balance}</td>
                     <td className="p-2 border">
-                      <button className="text-blue-400 hover:underline">Edit</button>
-                      <button className="text-red-400 hover:underline ml-2">Delete</button>
+                      <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded">
+                        Edit
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -220,32 +283,35 @@ function Dashboard({ tableData }) {
             </table>
           </div>
 
-          {/* Grid for charts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-            <div className="bg-gray-800 p-4 rounded h-full">
-              <h2 className="text-lg font-bold mb-4">Balances by Client</h2>
-              <Bar data={balanceChartData} options={chartOptions} />
-            </div>
-            <div className="bg-gray-800 p-4 rounded h-full">
-              <h2 className="text-lg font-bold mb-4">Credit/Debit Distribution</h2>
-              <Pie data={creditDebitChartData} options={chartOptions} />
-            </div>
-            <div className="bg-gray-800 p-4 rounded h-full">
-              <h2 className="text-lg font-bold mb-4">Transaction Amounts Over Time</h2>
-              <Line data={transactionChartData} options={chartOptions} />
-            </div>
-            <div className="bg-gray-800 p-4 rounded h-full">
-              <h2 className="text-lg font-bold mb-4">Balance Distribution (Doughnut)</h2>
-              <Doughnut data={doughnutChartData} options={chartOptions} />
-            </div>
-            <div className="bg-gray-800 p-4 rounded h-full">
-              <h2 className="text-lg font-bold mb-4">Transaction Amounts (Horizontal Bar)</h2>
-              <Bar data={horizontalBarData} options={{ ...chartOptions, indexAxis: 'y' }} />
-            </div>
-            <div className="bg-gray-800 p-4 rounded h-full">
-              <h2 className="text-lg font-bold mb-4">Transaction Amount vs Balance (Scatter)</h2>
-              <Scatter data={scatterData} options={chartOptions} />
-            </div>
+          {/* Chart rendering */}
+          <div className="mb-4">
+            <h2 className="text-lg font-bold mb-2">Balance Chart</h2>
+            <Bar data={balanceChartData} options={chartOptions} />
+          </div>
+
+          <div className="mb-4">
+            <h2 className="text-lg font-bold mb-2">Credit/Debit Distribution</h2>
+            <Pie data={creditDebitChartData} options={chartOptions} />
+          </div>
+
+          <div className="mb-4">
+            <h2 className="text-lg font-bold mb-2">Transaction Amounts Over Time</h2>
+            <Line data={transactionChartData} options={chartOptions} />
+          </div>
+
+          <div className="mb-4">
+            <h2 className="text-lg font-bold mb-2">Balance Distribution</h2>
+            <Doughnut data={doughnutChartData} options={chartOptions} />
+          </div>
+
+          <div className="mb-4">
+            <h2 className="text-lg font-bold mb-2">Horizontal Bar of Transaction Amounts</h2>
+            <Bar data={horizontalBarData} options={chartOptions} />
+          </div>
+
+          <div className="mb-4">
+            <h2 className="text-lg font-bold mb-2">Scatter Plot - Transaction vs Balance</h2>
+            <Scatter data={scatterData} options={chartOptions} />
           </div>
         </div>
       </div>

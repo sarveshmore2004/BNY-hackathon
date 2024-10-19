@@ -11,7 +11,7 @@ const useDeleteUser = () => {
     setShowModal(false);
     try {
       dispatch(deleteUserStart());
-      const res = await fetch(`http://localhost:3000/api/user/delete/${userId}`, {
+      const res = await fetch(`/api/user/delete/${userId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
