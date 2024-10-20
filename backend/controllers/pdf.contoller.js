@@ -15,7 +15,7 @@ const pdfToImages = async (pdfBuffer) => {
     fs.writeFileSync(tempFilePath, pdfBuffer);
 
     try {
-        const document = await pdf(tempFilePath, { scale: 3 });
+        const document = await pdf(tempFilePath, { scale: 5 });
         const imagePaths = [];
         let counter = 1;
 

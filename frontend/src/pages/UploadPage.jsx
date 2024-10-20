@@ -5,6 +5,7 @@ import Header from "../components/Header";
 import Upload from "../components/Upload";
 import Table from "../components/Table";
 import useGemini from "../hooks/useGemini"; // Import the useGemini hook
+import { ClipLoader } from 'react-spinners';
 
 function UploadPage() {
   const { processText, loading, result, error } = useGemini(); // Using the hook

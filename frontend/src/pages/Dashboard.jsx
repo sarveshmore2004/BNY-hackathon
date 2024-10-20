@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Header from "../components/Header";
 import { Footer } from "flowbite-react";
 import { Bar, Pie, Line, Doughnut, Scatter } from "react-chartjs-2";
@@ -18,6 +18,7 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
+import useGemini from "../hooks/useGemini";
 
 ChartJS.register(
   CategoryScale,
@@ -47,6 +48,46 @@ function Dashboard() {
     }
     getStatement()
   }, []);
+  
+const createPrompt = (data) => {
+  if (!data || data.length === 0) return '';
+
+  return data.map(item => {
+    return `Client Name: ${item.clientName}, Bank Name: ${item.bankName}, Account Number: ${item.accountNumber}, Transaction Date: ${item.transactionDate}, Credit/Debit: ${item.creditDebit}, Amount: ${item.amount}`;
+  }).join('\n');
+};
+
+  const {processText}=useGemini();
+useEffect(()=>
+{
+if(selectedTableData)
+{
+  const checkFraud = async () => {
+    const prompt = createPrompt(selectedTableData);
+    const fraud = await processText(`I have a list of transactions with the following fields:
+    - Client Name
+    - Bank Name
+    - Account Number
+    - Transaction Date (mm/dd/yyyy)
+    - Credit/Debit
+    - Description
+    - Amount
+    - Balance
+  
+  Please analyze the following transactions and identify which ones have the highest likelihood of being fraudulent,give me the objects with the reason why you think they could be fradulent. Just give the transactions which are likely and the reasons and nothing else, be clear and concise:
+  
+  ${prompt}`);
+    console.log(fraud);
+  };
+  
+  
+checkFraud()
+
+}
+
+},[selectedTableData])
+  // State for tracking selected table
+  const [selectedTableIndex, setSelectedTableIndex] = useState(0);
 
   // Loading or error handling for fetching all statements
   if (loading) {

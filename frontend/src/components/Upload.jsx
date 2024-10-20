@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { test } from "../../../backend/controllers/user.controller";
+import { ClipLoader } from 'react-spinners';
 
 function Upload({ onUploadData, setExtractedText, processText, loading, result, error }) {
   const [file, setFile] = useState(null);
@@ -11,6 +12,8 @@ function Upload({ onUploadData, setExtractedText, processText, loading, result, 
     setFile(event.target.files[0]);
   };
 const [trigger,setTrigger]=useState(0);
+const [loadingClip, setLoadingClip] = useState(false);
+
 //   const handleUpload = async (event) => {
 //     event.preventDefault();
 //     console.log("Uploaded file:", file);
@@ -80,6 +83,7 @@ const [trigger,setTrigger]=useState(0);
 
 const handleUpload = async (event) => {
   event.preventDefault();
+setLoadingClip(true)
   console.log("Uploaded file:", file);
 
   const formData = new FormData();
@@ -136,8 +140,8 @@ const handleUpload = async (event) => {
       }
       // Include more transactions here...
       ]
-      
-      Return the JSON first then after that provide the most relevant info from the current page.`;
+      Extract only the bank statement transactions. Dont extract the summaries.
+      Return the JSON first then after that provide the most relevant info from the current page thst might be required on the next page. Also just tell where you have left of so that the next page might continue it if data is there.`; 
             console.log(`Processing page ${index + 1}:`, simulatedExtractedText);
       setExtractedText(simulatedExtractedText);
       
@@ -148,8 +152,11 @@ const handleUpload = async (event) => {
     }
 
     setContext(combinedContext); // Set the final combined context after the loop
+
   } catch (error) {
     console.error('Error uploading file:', error);
+  }finally {
+    setLoadingClip(false); // Stop loading animation in both success and error cases
   }
 };
 
@@ -211,12 +218,21 @@ const handleResult = async (result, previousContext) => {
         />
         <button
           type="submit"
+        
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200"
         >
           Upload
         </button>
       </form>
-      {loading && <p className="text-center mt-4">Processing...</p>}
+      {!loading&&loadingClip && <p className="text-center mt-4">Processing PDF...</p>}
+
+      {loading &&loadingClip&&   <p className="text-center mt-4">Populating Table...</p>}
+
+      {loadingClip && (
+        <div className="flex justify-center mt-4">
+          <ClipLoader color="white" loading={loadingClip} size={50} />
+        </div>
+      )}
       {error && <p className="text-red-500 mt-4">Error: {error}</p>}
       {result && <p className="mt-4">Gemini Response: {result}</p>}
     </div>
