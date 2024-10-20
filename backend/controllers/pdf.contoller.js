@@ -13,7 +13,7 @@ const upload = multer({ storage: storage });
 const pdfToImages = async (pdfBuffer) => {
     const tempFilePath = path.join(os.tmpdir(), 'uploaded_pdf.pdf');
     fs.writeFileSync(tempFilePath, pdfBuffer);
-
+    await fs.promises.mkdir('uploads', { recursive: true });
     try {
         const document = await pdf(tempFilePath, { scale: 5 });
         const imagePaths = [];

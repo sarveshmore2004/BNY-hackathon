@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Header from "../components/Header";
 import { Footer } from "flowbite-react";
 import { Bar, Pie, Line, Doughnut, Scatter } from "react-chartjs-2";
 import useGetAllStatements from "../hooks/useGetAllStatements";
 import useGetStatementById from "../hooks/useGetStatementById";
 import useGemini from "../hooks/useGemini";
-
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -142,23 +141,32 @@ function Dashboard() {
     setEditData({});
   };
 
-  // Function to export data to CSV
+    // Define columns for the react-table
+    const columns = useMemo(
+      () => [
+        { Header: "Client Name", accessor: "clientName" },
+        { Header: "Bank Name", accessor: "bankName" },
+        { Header: "Account Number", accessor: "accountNumber" },
+        { Header: "Transaction Date", accessor: "transactionDate" },
+        { Header: "Credit/Debit", accessor: "type" },
+        { Header: "Description", accessor: "description" },
+        { Header: "Amount ($)", accessor: "amount" },
+        { Header: "Balance ($)", accessor: "balance" },
+      ],
+      []
+    );
+
+  // Function to export table data to CSV
   const exportToCSV = () => {
     const csvRows = [];
-    const headers = ["Client Name", "Bank Name", "Account Number", "Transaction Date", "Credit/Debit", "Description", "Amount ($)", "Balance ($)"];
+    const headers = columns.map((column) => column.Header);
     csvRows.push(headers.join(','));
 
     selectedTableData.statement.transactions.forEach((row) => {
-      const values = [
-        row.clientName,
-        row.bankName,
-        row.accountNumber,
-        row.transactionDate,
-        row.type,
-        row.description,
-        formatNumberWithCommas(row.amount),
-        formatNumberWithCommas(row.balance),
-      ];
+      const values = columns.map((column) => {
+        const value = row[column.accessor];
+        return `"${value}"`;
+      });
       csvRows.push(values.join(','));
     });
 
@@ -167,7 +175,8 @@ function Dashboard() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'financial_data.csv');
+    link.setAttribute('download', 'bank_statement.csv');
+    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

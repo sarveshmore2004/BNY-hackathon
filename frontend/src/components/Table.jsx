@@ -22,7 +22,7 @@ function Table({ data, onUpdateData }) {
       { Header: "Bank Name", accessor: "bankName" },
       { Header: "Account Number", accessor: "accountNumber" },
       { Header: "Transaction Date", accessor: "transactionDate" },
-      { Header: "Credit/Debit", accessor: "creditDebit" },
+      { Header: "Credit/Debit", accessor: "type" },
       { Header: "Description", accessor: "description" },
       { Header: "Amount ($)", accessor: "amount" },
       { Header: "Balance ($)", accessor: "balance" },
@@ -38,28 +38,6 @@ function Table({ data, onUpdateData }) {
     columns,
     data: dataToDisplay || [],
   });
-
-  const handleEdit = (index) => {
-    setEditRowIndex(index);
-    setEditRowData(data[index]);
-    setIsEditing(true);
-    document.body.style.overflow = 'hidden';
-  };
-
-  const handleUpdate = () => {
-    const updatedData = [...data];
-    updatedData[editRowIndex] = editRowData;
-    onUpdateData(updatedData);
-    setIsEditing(false);
-    setEditRowIndex(null);
-    setEditRowData({});
-    document.body.style.overflow = 'auto';
-  };
-
-  const handleClose = () => {
-    setIsEditing(false);
-    document.body.style.overflow = 'auto';
-  };
 
   // Function to save the statement
   const handleSaveStatement = async () => {
