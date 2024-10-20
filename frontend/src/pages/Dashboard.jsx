@@ -347,8 +347,8 @@ const checkUnusuallyHighTransactions = () => {
       };
       
       
-    checkFraud();
-          findDuplicates();
+      checkFraud();
+      findDuplicates();
       checkMultipleTransactionsSameDay();
       checkFrequentSmallTransactions();
       checkUnusuallyHighTransactions();
@@ -436,7 +436,7 @@ const checkUnusuallyHighTransactions = () => {
   
     const creditDebitDistribution = selectedTableData.statement.transactions.reduce(
       (acc, statement) => {
-        acc[statement.creditDebit] = (acc[statement.creditDebit] || 0) + 1;
+        acc[statement.type] = (acc[statement.type] || 0) + 1;
         return acc;
       },
       {}

@@ -4,7 +4,6 @@ import { Toaster } from "sonner";
 import SignIn from "./pages/SignIn";
 import PrivateRoute from "./components/PrivateRoute";
 import Profile from "./pages/Profile";
-import About from "./pages/About";
 import OnlyAdminPrivateRoute from "./components/OnlyAdminPrivateRoute";
 import UploadPage from "./pages/UploadPage";
 import Dashboard from "./pages/Dashboard";
@@ -17,7 +16,6 @@ export default function App() {
       <Routes>
         <Route path="/sign-up" element={<SignUp />} />
         <Route path="/sign-in" element={<SignIn />} />
-        <Route path="/about" element={<About />} />
         <Route element={<PrivateRoute />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/upload" element={<UploadPage />} />

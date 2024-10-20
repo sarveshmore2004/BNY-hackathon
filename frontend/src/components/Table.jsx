@@ -26,18 +26,6 @@ function Table({ data, onUpdateData }) {
       { Header: "Description", accessor: "description" },
       { Header: "Amount ($)", accessor: "amount" },
       { Header: "Balance ($)", accessor: "balance" },
-      {
-        Header: "Actions",
-        accessor: "actions",
-        Cell: ({ row }) => (
-          <button
-            onClick={() => handleEdit(row.index)}
-            className="text-blue-500 hover:underline"
-          >
-            Edit
-          </button>
-        ),
-      },
     ],
     []
   );
@@ -206,47 +194,6 @@ useEffect(() => {
         </button>
         {postingError && <p className="text-red-500 mt-2">{postingError}</p>}
       </div>
-
-      <Modal
-        isOpen={isEditing}
-        onRequestClose={handleClose}
-        contentLabel="Edit Transaction"
-        className="fixed inset-0 flex items-center justify-center z-50"
-        overlayClassName="fixed inset-0 bg-black bg-opacity-50 backdrop-filter backdrop-blur-sm"
-      >
-        <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-[90vw] max-w-lg">
-          <h3 className="text-lg font-semibold text-gray-200">Edit Transaction</h3>
-          <form className="space-y-4">
-            {Object.keys(editRowData).map((key) => (
-              <div key={key}>
-                <label className="block text-sm text-white">{key.replace(/([A-Z])/g, ' $1')}</label>
-                <input
-                  type="text"
-                  value={editRowData[key]}
-                  onChange={(e) => setEditRowData({ ...editRowData, [key]: e.target.value })}
-                  className="block w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md text-white"
-                />
-              </div>
-            ))}
-            <div className="flex justify-between">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleUpdate}
-                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-              >
-                Save Changes
-              </button>
-            </div>
-          </form>
-        </div>
-      </Modal>
     </div>
   );
 }
