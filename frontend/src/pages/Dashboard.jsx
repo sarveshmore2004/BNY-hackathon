@@ -313,7 +313,7 @@ const checkUnusuallyHighTransactions = () => {
     const getStatement = async () => {
       const data = await fetchStatements();
       setData(data);
-      if (data) setSelectedStatementId(data.statements[0]._id);
+      if (data.statements.length>0) setSelectedStatementId(data.statements[0]._id);
     };
     getStatement();
   }, []);
@@ -382,6 +382,19 @@ const checkUnusuallyHighTransactions = () => {
     );
   }
 
+  // Check if no data is available for statements
+  if (!data || data.statements.length === 0) {
+    return (
+      <div className="flex flex-col h-screen w-screen bg-gray-900 text-white">
+        <Header />
+        <div className="flex-grow flex items-center justify-center">
+          <p className="text-xl">No data available to display charts.</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   // Loading or error handling for fetching the selected statement by ID
   if (statementLoading) {
     return (
@@ -406,21 +419,6 @@ const checkUnusuallyHighTransactions = () => {
       </div>
     );
   }
-
-  // Check if no data is available for statements
-  if (!data || data.statements.length === 0) {
-    return (
-      <div className="flex flex-col h-screen w-screen bg-gray-900 text-white">
-        <Header />
-        <div className="flex-grow flex items-center justify-center">
-          <p className="text-xl">No data available to display charts.</p>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-
 
     // Prepare chart data
     const balanceChartData = {

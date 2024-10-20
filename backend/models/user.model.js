@@ -25,6 +25,13 @@ const userSchema = new mongoose.Schema(
         type: Boolean,
         default: false,
     },
+    statements: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Statement',
+      },
+    ],
+
   },
   { timestamps: true }
 );

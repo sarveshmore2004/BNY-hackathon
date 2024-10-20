@@ -12,7 +12,6 @@ import { useSelector } from "react-redux";
 
 const navigation = [
   { name: "Upload", href: "/upload", current: true },
-  { name: "About", href: "/about", current: false },
   { name: "Dashboard", href: "/", current: false },
 ];
 
