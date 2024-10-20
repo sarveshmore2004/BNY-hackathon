@@ -39,6 +39,177 @@ function Dashboard() {
   const { statement: selectedTableData, loading: statementLoading, error: statementError } = useGetStatementById(selectedStatementId);
   const [data,setData]=useState(null);
 
+
+
+  //for duplicate checking
+  const [duplicates, setDuplicates] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+
+  // State for multiple transactions on the same day
+  const [multipleTransactionsSameDay, setMultipleTransactionsSameDay] = useState([]);
+  const [multipleTransactionCount, setMultipleTransactionCount] = useState(0);
+
+  const [showMoreDuplicates, setShowMoreDuplicates] = useState(false);
+  const [showMoreSameDay, setShowMoreSameDay] = useState(false);
+
+  //frequent small transactions
+  const [frequentSmallTransactions, setFrequentSmallTransactions] = useState([]);
+  const [frequentSmallTransactionCount, setFrequentSmallTransactionCount] = useState(0);
+  const [showMoreSmallTransactions, setShowMoreSmallTransactions] = useState(false);
+
+
+  //unusually high transaction
+  const [unusuallyHighTransactions, setUnusuallyHighTransactions] = useState([]);
+  const [unusuallyHighTransactionCount, setUnusuallyHighTransactionCount] = useState(0);
+  const [showMoreHighTransactions, setShowMoreHighTransactions] = useState(false);
+  
+
+  // Check for duplicates
+  // useEffect(() => {
+  //   if(selectedTableData){
+  //     findDuplicates();
+  //     checkMultipleTransactionsSameDay();
+  //     checkFrequentSmallTransactions();
+  //     checkUnusuallyHighTransactions();
+  //   }
+  // }, [selectedTableData]);
+
+  const findDuplicates = () => {
+    const transactionCount = {};
+    
+    // Count occurrences of each transaction
+    selectedTableData?.statement?.transactions?.forEach(transaction => {
+      const key = JSON.stringify({
+        clientName: transaction.clientName,
+        transactionDate: transaction.transactionDate,
+        amount: transaction.amount,
+        description: transaction.description,
+      }); // Create a unique key for each transaction
+      transactionCount[key] = (transactionCount[key] || 0) + 1;
+    });
+
+    // Filter to find duplicates
+    const duplicateTransactions = Object.entries(transactionCount)
+      .filter(([_, count]) => count > 1)
+      .map(([key, count]) => ({
+        transaction: JSON.parse(key), // Convert back to original object
+        count
+      }));
+
+    setDuplicates(duplicateTransactions);
+    setTotalCount(duplicateTransactions.length);
+  };
+
+  const checkMultipleTransactionsSameDay = () => {
+    const transactionMap = {};
+
+    // Count transactions per account per day
+    selectedTableData?.statement?.transactions?.forEach(transaction => {
+        const key = `${transaction.accountNumber}-${transaction.transactionDate}`;
+        transactionMap[key] = (transactionMap[key] || 0) + 1;
+    });
+
+    const flaggedTransactions = Object.entries(transactionMap)
+        .filter(([_, count]) => count > 1)
+        .map(([key, count]) => {
+            const [account, date] = key.split('-');
+            return { account, date, count };
+        });
+
+    setMultipleTransactionsSameDay(flaggedTransactions);
+    setMultipleTransactionCount(flaggedTransactions.length);
+};
+
+
+
+const checkFrequentSmallTransactions = () => {
+  const smallTransactionMap = {};
+
+  // Define thresholds
+  const smallAmountThreshold = 101; // Define what is considered a "small" transaction
+  const largeAmountThreshold = 199; // Define the large amount threshold
+
+  // Count small transactions per account and month
+  selectedTableData?.statement?.transactions?.forEach(transaction => {
+      const [day, month, year] = transaction.transactionDate.split('/').map(Number); // Split and convert to numbers
+      const monthYearKey = `${transaction.accountNumber}-${year}-${month}`; // Format: account-YYYY-MM
+      const amount = parseFloat(transaction.amount);
+
+      if (amount < smallAmountThreshold) {
+          smallTransactionMap[monthYearKey] = (smallTransactionMap[monthYearKey] || 0) + amount;
+      }
+  });
+
+  // Filter out accounts with a sum greater than the large amount threshold
+  const flaggedSmallTransactions = Object.entries(smallTransactionMap)
+      .filter(([_, totalAmount]) => totalAmount > largeAmountThreshold)
+      .map(([key, totalAmount]) => {
+          const [account, year, month] = key.split('-');
+          return { account, year, month, totalAmount };
+      });
+
+  setFrequentSmallTransactions(flaggedSmallTransactions);
+  setFrequentSmallTransactionCount(flaggedSmallTransactions.length);
+};
+
+
+const checkUnusuallyHighTransactions = () => {
+  const transactionAmounts = {};
+  const transactionCounts = {};
+  const transactionData = {};
+
+  // Calculate total amounts and counts for each account
+  selectedTableData?.statement?.transactions?.forEach(transaction => {
+      const account = transaction.accountNumber;
+      const amount = parseFloat(transaction.amount);
+
+      if (!transactionData[account]) {
+          transactionData[account] = [];
+          transactionAmounts[account] = 0;
+          transactionCounts[account] = 0;
+      }
+
+      transactionData[account].push(amount);
+      transactionAmounts[account] += amount;
+      transactionCounts[account] += 1;
+  });
+
+  const unusuallyHighTransactions = [];
+
+  // Calculate average and standard deviation, then flag unusually high transactions
+  for (const account in transactionData) {
+      const amounts = transactionData[account];
+      const mean = transactionAmounts[account] / transactionCounts[account];
+
+      // Calculate standard deviation
+      const variance = amounts.reduce((acc, amount) => acc + Math.pow(amount - mean, 2), 0) / transactionCounts[account];
+      const standardDeviation = Math.sqrt(variance);
+
+      // Flag transactions that are more than 3 standard deviations above the mean
+      selectedTableData?.statement?.transactions?.forEach(transaction => {
+          if (transaction.accountNumber === account) {
+              const amount = parseFloat(transaction.amount);
+              if (amount > mean + 3 * standardDeviation) {
+                  unusuallyHighTransactions.push({
+                      account,
+                      amount,
+                      mean,
+                      standardDeviation,
+                      transactionDate: transaction.transactionDate,
+                      description: transaction.description
+                  });
+              }
+          }
+      });
+  }
+
+  setUnusuallyHighTransactions(unusuallyHighTransactions);
+  setUnusuallyHighTransactionCount(unusuallyHighTransactions.length);
+};
+
+
+
+
   useEffect(() => {
     const getStatement=async()=>{
       const data=await fetchStatements();
@@ -63,7 +234,7 @@ useEffect(()=>
 if(selectedTableData)
 {
   const checkFraud = async () => {
-    const prompt = createPrompt(selectedTableData);
+    const prompt = createPrompt(selectedTableData.statement.transactions);
     const fraud = await processText(`I have a list of transactions with the following fields:
     - Client Name
     - Bank Name
@@ -81,7 +252,11 @@ if(selectedTableData)
   };
   
   
-checkFraud()
+checkFraud();
+findDuplicates();
+checkMultipleTransactionsSameDay();
+checkFrequentSmallTransactions();
+checkUnusuallyHighTransactions();
 
 }
 
@@ -323,6 +498,116 @@ checkFraud()
               </tbody>
             </table>
           </div>
+
+
+        {/* Display duplicate transactions */}
+        <div className="mb-4">
+          <h2 className="text-lg font-bold mb-2">Duplicate Transactions</h2>
+          <h2 className="font-bold">Total Duplicates Found: {totalCount}</h2>
+          {duplicates.length > 0 ? (
+            <div>
+              <ul>
+                {(showMoreDuplicates ? duplicates : duplicates.slice(0, 3)).map((dup, index) => (
+                  <li key={index} className="bg-gray-800 p-2 rounded mb-2">
+                    {dup.transaction.clientName} - {dup.transaction.transactionDate} - {dup.transaction.amount} - {dup.transaction.description} (Count: {dup.count})
+                  </li>
+                ))}
+              </ul>
+              {duplicates.length > 3 && (
+                <button
+                  className="text-blue-500 underline mt-2"
+                  onClick={() => setShowMoreDuplicates(!showMoreDuplicates)}
+                >
+                  {showMoreDuplicates ? "Show Less" : "Show More"}
+                </button>
+              )}
+            </div>
+          ) : (
+            <p>No Duplicate Transactions Found</p>
+          )}
+        </div>
+
+        {/* Display unusually high Multiple transactions on same day */}
+        <div className="mb-4">
+          <h2 className="text-lg font-bold mb-2">Multiple Transactions on Same Day</h2>
+          {multipleTransactionsSameDay.length > 0 ? (
+            <div>
+              <h2 className="font-bold">Total Instances Found: {multipleTransactionCount}</h2>
+              <ul>
+                {(showMoreSameDay ? multipleTransactionsSameDay : multipleTransactionsSameDay.slice(0, 3)).map((item, index) => (
+                  <li key={index} className="bg-gray-800 p-2 rounded mb-2">
+                    Account: {item.account} - Date: {item.date} - Transactions Count: {item.count}
+                  </li>
+                ))}
+              </ul>
+              {multipleTransactionsSameDay.length > 3 && (
+                <button
+                  className="text-blue-500 underline mt-2"
+                  onClick={() => setShowMoreSameDay(!showMoreSameDay)}
+                >
+                  {showMoreSameDay ? "Show Less" : "Show More"}
+                </button>
+              )}
+            </div>
+          ) : (
+            <p>No Multiple Transactions Found</p>
+          )}
+        </div>
+
+        {/* Display Frequent Small Transactions */}
+        <div className="mb-4">
+          <h2 className="text-lg font-bold mb-2">Frequent Small Transactions</h2>
+          {frequentSmallTransactions.length > 0 ? (
+            <div>
+              <h2 className="font-bold">Total Instances Found: {frequentSmallTransactionCount}</h2>
+              <ul>
+                {(showMoreSmallTransactions ? frequentSmallTransactions : frequentSmallTransactions.slice(0, 5)).map((item, index) => (
+                  <li key={index} className="bg-gray-800 p-2 rounded mb-2">
+                    Account: {item.account} - Month: {item.month}/{item.year} - Total Small Amount: ${item.totalAmount.toFixed(2)}
+                  </li>
+                ))}
+              </ul>
+              {frequentSmallTransactions.length > 5 && (
+                <button
+                  className="text-blue-500 underline mt-2"
+                  onClick={() => setShowMoreSmallTransactions(!showMoreSmallTransactions)}
+                >
+                  {showMoreSmallTransactions ? "Show Less" : "Show More"}
+                </button>
+              )}
+            </div>
+          ) : (
+            <p>No Frequent Small Transactions Found</p>
+          )}
+        </div>
+
+        {/* Display Unusually High Transactions */}
+        <div className="mb-4">
+          <h2 className="text-lg font-bold mb-2">Unusually High Transactions</h2>
+          {unusuallyHighTransactions.length > 0 ? (
+            <div>
+              <h2 className="font-bold">Total Instances Found: {unusuallyHighTransactionCount}</h2>
+              <ul>
+                {(showMoreHighTransactions ? unusuallyHighTransactions : unusuallyHighTransactions.slice(0, 5)).map((item, index) => (
+                  <li key={index} className="bg-gray-800 p-2 rounded mb-2">
+                    Account: {item.account} - Amount: ${item.amount.toFixed(2)} - Mean: ${item.mean.toFixed(2)} - Std Dev: ${item.standardDeviation.toFixed(2)} - Date: {item.transactionDate} - Description: {item.description}
+                  </li>
+                ))}
+              </ul>
+              {unusuallyHighTransactions.length > 5 && (
+                <button
+                  className="text-blue-500 underline mt-2"
+                  onClick={() => setShowMoreHighTransactions(!showMoreHighTransactions)}
+                >
+                  {showMoreHighTransactions ? "Show Less" : "Show More"}
+                </button>
+              )}
+            </div>
+          ) : (
+            <p>No Unusually High Transactions Found</p>
+          )}
+        </div>
+
 
           {/* Chart rendering */}
           <div className="mb-4">
