@@ -35,3 +35,6 @@ BIC Bank aims to automate the audit request process for financial statements usi
 - **OCR**: Tesseract.js
 - **Fraud Detection**: Gemini API , Algorithms
 
+  ![WhatsApp Image 2024-10-20 at 11 25 04_4bb72f85](https://github.com/user-attachments/assets/56166aef-7e74-47b2-8138-d1fcb0fc09aa)
+
+
