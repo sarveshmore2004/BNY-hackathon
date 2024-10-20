@@ -10,14 +10,24 @@ const usePostStatement = () => {
     setError(null);
 
     try {
-      const response = await fetch("/api/statements", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      // Map tableData to match the backend's expected structure
+      const formattedTransactions = tableData.map((item) => ({
+        clientName: item.clientName,
+        bankName: item.bankName,
+        accountNumber: item.accountNumber,
+        transactionDate: item.transactionDate,
+        type: item.creditDebit.toLowerCase(), // Convert 'Credit'/'Debit' to 'credit'/'debit'
+        description: item.description,
+        amount: parseFloat(item.amount), // Convert string to number
+        balance: parseFloat(item.balance), // Convert string to number
+      }));
+
+      const response = await fetch('/api/statements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          transactions: tableData.map((item) => item._id),
-          accuracy: accuracy,
+          transactions: formattedTransactions,
+          accuracy: accuracy, // Pass in the accuracy dynamically
         }),
       });
 

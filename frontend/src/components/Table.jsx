@@ -1,14 +1,19 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { useTable } from "react-table";
 import Modal from "react-modal";
+import usePostStatement from "../hooks/usePostStatement"; // Import the usePostStatement hook
 
 Modal.setAppElement('#root'); // Set the app element for accessibility
 
 function Table({ data, onUpdateData }) {
-  const [showMore, setShowMore] = useState(false); // State to toggle "Show More" / "Show Less"
-  const [isEditing, setIsEditing] = useState(false); // State to handle editing
-  const [editRowIndex, setEditRowIndex] = useState(null); // Track the index of the row being edited
-  const [editRowData, setEditRowData] = useState({}); // Store the data of the row being edited
+  const [showMore, setShowMore] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editRowIndex, setEditRowIndex] = useState(null);
+  const [editRowData, setEditRowData] = useState({});
+  const [accuracy, setAccuracy] = useState(0); // State for accuracy input
+
+  // Using the usePostStatement hook
+  const { postStatement, loading: postingLoading, error: postingError } = usePostStatement();
 
   // Define columns for the react-table
   const columns = useMemo(
@@ -37,18 +42,10 @@ function Table({ data, onUpdateData }) {
     []
   );
 
-  // Limit for initial rows display (show only 5 rows by default)
   const rowLimit = 5;
-
-  // Toggle between showing all rows and limiting to 5 rows
-  const toggleShowMore = () => {
-    setShowMore(!showMore);
-  };
-
-  // Decide how many rows to display based on the state of showMore
+  const toggleShowMore = () => setShowMore(!showMore);
   const dataToDisplay = showMore ? data : data?.slice(0, rowLimit);
 
-  // Use the react-table hook
   const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } = useTable({
     columns,
     data: dataToDisplay || [],
@@ -56,44 +53,49 @@ function Table({ data, onUpdateData }) {
 
   const handleEdit = (index) => {
     setEditRowIndex(index);
-    setEditRowData(data[index]); // Get the data of the row being edited
-    setIsEditing(true); // Open the edit form
-    document.body.style.overflow = 'hidden'; // Prevent background scroll
+    setEditRowData(data[index]);
+    setIsEditing(true);
+    document.body.style.overflow = 'hidden';
   };
 
   const handleUpdate = () => {
-    const updatedData = [...data]; // Create a copy of the data
-    updatedData[editRowIndex] = editRowData; // Replace the old data with the updated data
-    onUpdateData(updatedData); // Call the parent to update data
-    setIsEditing(false); // Close the edit form
-    setEditRowIndex(null); // Reset edit row index
-    setEditRowData({}); // Reset edit row data
-    document.body.style.overflow = 'auto'; // Restore background scroll
+    const updatedData = [...data];
+    updatedData[editRowIndex] = editRowData;
+    onUpdateData(updatedData);
+    setIsEditing(false);
+    setEditRowIndex(null);
+    setEditRowData({});
+    document.body.style.overflow = 'auto';
   };
 
   const handleClose = () => {
-    setIsEditing(false); // Close the edit form
-    document.body.style.overflow = 'auto'; // Restore background scroll
+    setIsEditing(false);
+    document.body.style.overflow = 'auto';
+  };
+
+  // Function to save the statement
+  const handleSaveStatement = async () => {
+    console.log(data , accuracy)
+    const response = await postStatement(data, accuracy);
+    if (response) {
+      console.log("Statement saved successfully:", response);
+    }
   };
 
   // Function to export table data to CSV
   const exportToCSV = () => {
     const csvRows = [];
-
-    // Get headers
     const headers = columns.map(column => column.Header);
     csvRows.push(headers.join(','));
 
-    // Get data rows
     data.forEach(row => {
       const values = columns.map(column => {
         const value = row[column.accessor];
-        return `"${value}"`; // Wrap values in quotes
+        return `"${value}"`;
       });
       csvRows.push(values.join(','));
     });
 
-    // Create a blob from the CSV string and trigger a download
     const csvString = csvRows.join('\n');
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -137,19 +139,14 @@ function Table({ data, onUpdateData }) {
         </tbody>
       </table>
 
-      {/* Show More / Show Less Button */}
       {data.length > rowLimit && (
         <div className="flex justify-end mt-4">
-          <button
-            onClick={toggleShowMore}
-            className="text-blue-500 hover:underline"
-          >
+          <button onClick={toggleShowMore} className="text-blue-500 hover:underline">
             {showMore ? "Show Less" : "Show More"}
           </button>
         </div>
       )}
 
-      {/* Export to CSV Button */}
       {data.length > 0 && (
         <div className="flex justify-end mt-4">
           <button
@@ -161,13 +158,31 @@ function Table({ data, onUpdateData }) {
         </div>
       )}
 
-      {/* Edit Form in Modal */}
+      {/* Accuracy Input */}
+      <div className="flex justify-end mt-4">
+        <input
+          type="number"
+          placeholder="Accuracy (%)"
+          value={accuracy}
+          onChange={(e) => setAccuracy(e.target.value)}
+          className="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 text-white"
+        />
+        <button
+          onClick={handleSaveStatement}
+          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-200 ml-2"
+          disabled={postingLoading} // Disable button while loading
+        >
+          {postingLoading ? "Saving..." : "Save Statement"}
+        </button>
+        {postingError && <p className="text-red-500 mt-2">{postingError}</p>}
+      </div>
+
       <Modal
         isOpen={isEditing}
-        onRequestClose={handleClose} // Close function now handles scroll restoration
+        onRequestClose={handleClose}
         contentLabel="Edit Transaction"
         className="fixed inset-0 flex items-center justify-center z-50"
-        overlayClassName="fixed inset-0 bg-black bg-opacity-50 backdrop-filter backdrop-blur-sm" // Changed backdrop blur to sm
+        overlayClassName="fixed inset-0 bg-black bg-opacity-50 backdrop-filter backdrop-blur-sm"
       >
         <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-[90vw] max-w-lg">
           <h3 className="text-lg font-semibold text-gray-200">Edit Transaction</h3>
@@ -207,3 +222,4 @@ function Table({ data, onUpdateData }) {
 }
 
 export default Table;
+ 
