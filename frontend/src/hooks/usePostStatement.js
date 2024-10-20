@@ -12,16 +12,16 @@ const usePostStatement = () => {
     try {
       // Map tableData to match the backend's expected structure
       const formattedTransactions = tableData.map((item) => ({
-        clientName: item.clientName,
-        bankName: item.bankName,
-        accountNumber: item.accountNumber,
-        transactionDate: item.transactionDate,
-        type: item.creditDebit.toLowerCase(), // Convert 'Credit'/'Debit' to 'credit'/'debit'
-        description: item.description,
-        amount: parseFloat(item.amount), // Convert string to number
-        balance: parseFloat(item.balance), // Convert string to number
+        clientName: item.clientName?item.clientName:"",
+        bankName: item.bankName?item.bankName:"",
+        accountNumber: item.accountNumber?item.accountNumber:"",
+        transactionDate: item.transactionDate? item.transactionDate:"",
+        type: item.creditDebit?item.creditDebit.toLowerCase():"", // Convert 'Credit'/'Debit' to 'credit'/'debit'
+        description: item.description?item.description:"",
+        amount: item.amount?parseFloat(item.amount):0, // Convert string to number
+        balance: item.balance?parseFloat(item.balance):0, // Convert string to number
       }));
-
+    console.log(formattedTransactions)
       const response = await fetch('/api/statements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

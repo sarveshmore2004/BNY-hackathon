@@ -177,8 +177,8 @@ const handleResult = async (result, previousContext) => {
           transactionDate: transaction.transactionDate || '',
           creditDebit: transaction.creditDebit || '',
           description: transaction.description || '',
-          amount: parseFloat(transaction.amount.replace(/[, ]/g, '')) || 0,
-          balance: parseFloat(transaction.balance.replace(/[, ]/g, '')) || 0
+          amount: transaction.amount ? parseFloat(transaction.amount.replace(/,/g, '')) : '', // Remove commas
+          balance: transaction.balance ? parseFloat(transaction.balance.replace(/,/g, '')) : '' // Remove commas
         }));
 
         setParsedData(rows);

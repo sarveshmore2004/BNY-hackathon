@@ -4,6 +4,7 @@ import { Footer } from "flowbite-react";
 import { Bar, Pie, Line, Doughnut, Scatter } from "react-chartjs-2";
 import useGetAllStatements from "../hooks/useGetAllStatements";
 import useGetStatementById from "../hooks/useGetStatementById";
+import useGemini from "../hooks/useGemini";
 
 import {
   Chart as ChartJS,
@@ -18,7 +19,6 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
-import useGemini from "../hooks/useGemini";
 
 ChartJS.register(
   CategoryScale,
@@ -33,47 +33,119 @@ ChartJS.register(
   Filler
 );
 
+// Utility functions for date formatting
+const formatDateToDDMMYYYY = (dateString) => {
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+const formatDateToYYYYMMDD = (ddmmyyyy) => {
+  const [day, month, year] = ddmmyyyy.split('/');
+  return `${year}-${month}-${day}`;
+};
+
+// Function to format number with commas
+const formatNumberWithCommas = (num) => {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
+
+// Function to parse number from string
+const parseNumberFromString = (str) => {
+  return parseFloat(str.replace(/,/g, ''));
+};
+
 function Dashboard() {
-  const { fetchStatements , loading, error} = useGetAllStatements();
+  const { fetchStatements, loading, error } = useGetAllStatements();
   const [selectedStatementId, setSelectedStatementId] = useState(null);
   const { statement: selectedTableData, loading: statementLoading, error: statementError } = useGetStatementById(selectedStatementId);
-  const [data,setData]=useState(null);
+  const [data, setData] = useState(null);
+  const [fraudGemini, setFraudGemini] = useState('');
 
+  // State for editing
+  const [isEditing, setIsEditing] = useState(false);
+  const [editIndex, setEditIndex] = useState(null);
+  const [editData, setEditData] = useState({});
 
-
-  //for duplicate checking
+  // State for various fraud detection features
   const [duplicates, setDuplicates] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
-
-  // State for multiple transactions on the same day
   const [multipleTransactionsSameDay, setMultipleTransactionsSameDay] = useState([]);
   const [multipleTransactionCount, setMultipleTransactionCount] = useState(0);
-
-  const [showMoreDuplicates, setShowMoreDuplicates] = useState(false);
-  const [showMoreSameDay, setShowMoreSameDay] = useState(false);
-
-  //frequent small transactions
   const [frequentSmallTransactions, setFrequentSmallTransactions] = useState([]);
   const [frequentSmallTransactionCount, setFrequentSmallTransactionCount] = useState(0);
-  const [showMoreSmallTransactions, setShowMoreSmallTransactions] = useState(false);
-
-
-  //unusually high transaction
   const [unusuallyHighTransactions, setUnusuallyHighTransactions] = useState([]);
   const [unusuallyHighTransactionCount, setUnusuallyHighTransactionCount] = useState(0);
+
+  // State for showing more/less
+  const [showMoreDuplicates, setShowMoreDuplicates] = useState(false);
+  const [showMoreSameDay, setShowMoreSameDay] = useState(false);
+  const [showMoreSmallTransactions, setShowMoreSmallTransactions] = useState(false);
   const [showMoreHighTransactions, setShowMoreHighTransactions] = useState(false);
-  
 
-  // Check for duplicates
-  // useEffect(() => {
-  //   if(selectedTableData){
-  //     findDuplicates();
-  //     checkMultipleTransactionsSameDay();
-  //     checkFrequentSmallTransactions();
-  //     checkUnusuallyHighTransactions();
-  //   }
-  // }, [selectedTableData]);
+  // Function to handle editing a transaction
+  const handleEdit = (index) => {
+    setEditIndex(index);
+    setEditData({
+      ...selectedTableData.statement.transactions[index],
+      transactionDate: (selectedTableData.statement.transactions[index].transactionDate),
+      amount: formatNumberWithCommas(selectedTableData.statement.transactions[index].amount),
+      balance: formatNumberWithCommas(selectedTableData.statement.transactions[index].balance),
+    });
+    setIsEditing(true);
+  };
 
+  // Function to handle form submission for editing
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const updatedTransactions = [...selectedTableData.statement.transactions];
+    updatedTransactions[editIndex] = {
+      ...editData,
+      transactionDate: (editData.transactionDate),
+      amount: parseNumberFromString(editData.amount),
+      balance: parseNumberFromString(editData.balance),
+    };
+    // Here you would typically update the state or make an API call to update the data
+    console.log("Updated transaction:", updatedTransactions[editIndex]);
+    setIsEditing(false);
+    setEditIndex(null);
+    setEditData({});
+  };
+
+  // Function to export data to CSV
+  const exportToCSV = () => {
+    const csvRows = [];
+    const headers = ["Client Name", "Bank Name", "Account Number", "Transaction Date", "Credit/Debit", "Description", "Amount ($)", "Balance ($)"];
+    csvRows.push(headers.join(','));
+
+    selectedTableData.statement.transactions.forEach((row) => {
+      const values = [
+        row.clientName,
+        row.bankName,
+        row.accountNumber,
+        row.transactionDate,
+        row.type,
+        row.description,
+        formatNumberWithCommas(row.amount),
+        formatNumberWithCommas(row.balance),
+      ];
+      csvRows.push(values.join(','));
+    });
+
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'financial_data.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // ... (keep all other existing functions like findDuplicates, checkMultipleTransactionsSameDay, etc.)
   const findDuplicates = () => {
     const transactionCount = {};
     
@@ -209,59 +281,52 @@ const checkUnusuallyHighTransactions = () => {
 
 
 
-
   useEffect(() => {
-    const getStatement=async()=>{
-      const data=await fetchStatements();
+    const getStatement = async () => {
+      const data = await fetchStatements();
       setData(data);
-      if(data) setSelectedStatementId(data.statements[0]._id);
-      console.log(selectedStatementId)
-    }
-    getStatement()
+      if (data) setSelectedStatementId(data.statements[0]._id);
+    };
+    getStatement();
   }, []);
+  const createPrompt = (data) => {
+    if (!data || data.length === 0) return '';
   
-const createPrompt = (data) => {
-  if (!data || data.length === 0) return '';
-
-  return data.map(item => {
-    return `Client Name: ${item.clientName}, Bank Name: ${item.bankName}, Account Number: ${item.accountNumber}, Transaction Date: ${item.transactionDate}, Credit/Debit: ${item.creditDebit}, Amount: ${item.amount}`;
-  }).join('\n');
-};
-
-  const {processText}=useGemini();
-useEffect(()=>
-{
-if(selectedTableData)
-{
-  const checkFraud = async () => {
-    const prompt = createPrompt(selectedTableData.statement.transactions);
-    const fraud = await processText(`I have a list of transactions with the following fields:
-    - Client Name
-    - Bank Name
-    - Account Number
-    - Transaction Date (mm/dd/yyyy)
-    - Credit/Debit
-    - Description
-    - Amount
-    - Balance
-  
-  Please analyze the following transactions and identify which ones have the highest likelihood of being fraudulent,give me the objects with the reason why you think they could be fradulent. Just give the transactions which are likely and the reasons and nothing else, be clear and concise:
-  
-  ${prompt}`);
-    console.log(fraud);
+    return data.map(item => {
+      return `Client Name: ${item.clientName}, Bank Name: ${item.bankName}, Account Number: ${item.accountNumber}, Transaction Date: ${item.transactionDate}, Credit/Debit: ${item.creditDebit}, Amount: ${item.amount}`;
+    }).join('\n');
   };
   
-  
-checkFraud();
-findDuplicates();
-checkMultipleTransactionsSameDay();
-checkFrequentSmallTransactions();
-checkUnusuallyHighTransactions();
+    const {processText}=useGemini();
+  useEffect(() => {
+    if (selectedTableData) {
+      const checkFraud = async () => {
+        const prompt = createPrompt(selectedTableData.statement.transactions);
+        const fraud = await processText(`I have a list of transactions with the following fields:
+        - Client Name
+        - Bank Name
+        - Account Number
+        - Transaction Date (mm/dd/yyyy)
+        - Credit/Debit
+        - Description
+        - Amount
+        - Balance
+      Please analyze the following transactions and identify which ones have the highest likelihood of being fraudulent,give me the objects with the reason why you think they could be fradulent. Just give the transactions which are likely and the reasons and nothing else, be clear and concise:
+      
+      ${prompt}`);
+      setFraudGemini(fraud)
+      console.log(fraud)
+      };
+      
+      
+    checkFraud();
+          findDuplicates();
+      checkMultipleTransactionsSameDay();
+      checkFrequentSmallTransactions();
+      checkUnusuallyHighTransactions();
+    }
+  }, [selectedTableData]);
 
-}
-
-},[selectedTableData])
-  // State for tracking selected table
   const [selectedTableIndex, setSelectedTableIndex] = useState(0);
 
   // Loading or error handling for fetching all statements
@@ -327,142 +392,147 @@ checkUnusuallyHighTransactions();
     );
   }
 
-  // Prepare chart data
-  const balanceChartData = {
-    labels: selectedTableData.statement.transactions.map(statement => statement.clientName),
-    datasets: [
-      {
-        label: 'Balance',
-        data: selectedTableData.statement.transactions.map(statement => parseFloat(statement.balance)),
-        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-      },
-    ],
-  };
 
-  const creditDebitDistribution = selectedTableData.statement.transactions.reduce(
-    (acc, statement) => {
-      acc[statement.creditDebit] = (acc[statement.creditDebit] || 0) + 1;
-      return acc;
-    },
-    {}
-  );
 
-  const creditDebitChartData = {
-    labels: Object.keys(creditDebitDistribution),
-    datasets: [
-      {
-        label: 'Credit/Debit Distribution',
-        data: Object.values(creditDebitDistribution),
-        backgroundColor: ['rgba(75, 192, 192, 0.6)', 'rgba(255, 99, 132, 0.6)'],
+    // Prepare chart data
+    const balanceChartData = {
+      labels: selectedTableData.statement.transactions.map(statement => statement.clientName),
+      datasets: [
+        {
+          label: 'Balance',
+          data: selectedTableData.statement.transactions.map(statement => parseFloat(statement.balance)),
+          backgroundColor: 'rgba(75, 192, 192, 0.6)',
+        },
+      ],
+    };
+  
+    const creditDebitDistribution = selectedTableData.statement.transactions.reduce(
+      (acc, statement) => {
+        acc[statement.creditDebit] = (acc[statement.creditDebit] || 0) + 1;
+        return acc;
       },
-    ],
-  };
-
-  const transactionAmounts = selectedTableData.statement.transactions.map(statement => ({
-    date: statement.transactionDate,
-    amount: parseFloat(statement.amount),
-  }));
-
-  const transactionChartData = {
-    labels: transactionAmounts.map(t => t.date),
-    datasets: [
-      {
-        label: 'Transaction Amounts',
-        data: transactionAmounts.map(t => t.amount),
-        borderColor: 'rgba(153, 102, 255, 1)',
-        backgroundColor: 'rgba(153, 102, 255, 0.2)',
-        fill: true,
+      {}
+    );
+  
+    const creditDebitChartData = {
+      labels: Object.keys(creditDebitDistribution),
+      datasets: [
+        {
+          label: 'Credit/Debit Distribution',
+          data: Object.values(creditDebitDistribution),
+          backgroundColor: ['rgba(75, 192, 192, 0.6)', 'rgba(255, 99, 132, 0.6)'],
+        },
+      ],
+    };
+  
+    const transactionAmounts = selectedTableData.statement.transactions.map(statement => ({
+      date: statement.transactionDate,
+      amount: parseFloat(statement.amount),
+    }));
+  
+    const transactionChartData = {
+      labels: transactionAmounts.map(t => t.date),
+      datasets: [
+        {
+          label: 'Transaction Amounts',
+          data: transactionAmounts.map(t => t.amount),
+          borderColor: 'rgba(153, 102, 255, 1)',
+          backgroundColor: 'rgba(153, 102, 255, 0.2)',
+          fill: true,
+        },
+      ],
+    };
+  
+    const doughnutChartData = {
+      labels: selectedTableData.statement.transactions.map(statement => statement.clientName),
+      datasets: [
+        {
+          label: 'Balance Distribution',
+          data: selectedTableData.statement.transactions.map(statement => parseFloat(statement.balance)),
+          backgroundColor: [
+            'rgba(255, 205, 86, 0.6)',
+            'rgba(54, 162, 235, 0.6)',
+            'rgba(255, 99, 132, 0.6)',
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(153, 102, 255, 0.6)',
+          ],
+        },
+      ],
+    };
+  
+    const horizontalBarData = {
+      labels: selectedTableData.statement.transactions.map(statement => statement.clientName),
+      datasets: [
+        {
+          label: 'Transaction Amounts',
+          data: selectedTableData.statement.transactions.map(statement => parseFloat(statement.amount)),
+          backgroundColor: 'rgba(255, 159, 64, 0.6)',
+        },
+      ],
+    };
+  
+    const scatterData = {
+      datasets: [
+        {
+          label: 'Transaction Amount vs Balance',
+          data: selectedTableData.statement.transactions.map(statement => ({
+            x: parseFloat(statement.balance),
+            y: parseFloat(statement.amount),
+          })),
+          backgroundColor: 'rgba(255, 99, 132, 0.6)',
+        },
+      ],
+    };
+  
+    const chartOptions = {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+        title: {
+          display: true,
+          text: 'Financial Overview',
+        },
       },
-    ],
-  };
-
-  const doughnutChartData = {
-    labels: selectedTableData.statement.transactions.map(statement => statement.clientName),
-    datasets: [
-      {
-        label: 'Balance Distribution',
-        data: selectedTableData.statement.transactions.map(statement => parseFloat(statement.balance)),
-        backgroundColor: [
-          'rgba(255, 205, 86, 0.6)',
-          'rgba(54, 162, 235, 0.6)',
-          'rgba(255, 99, 132, 0.6)',
-          'rgba(75, 192, 192, 0.6)',
-          'rgba(153, 102, 255, 0.6)',
-        ],
-      },
-    ],
-  };
-
-  const horizontalBarData = {
-    labels: selectedTableData.statement.transactions.map(statement => statement.clientName),
-    datasets: [
-      {
-        label: 'Transaction Amounts',
-        data: selectedTableData.statement.transactions.map(statement => parseFloat(statement.amount)),
-        backgroundColor: 'rgba(255, 159, 64, 0.6)',
-      },
-    ],
-  };
-
-  const scatterData = {
-    datasets: [
-      {
-        label: 'Transaction Amount vs Balance',
-        data: selectedTableData.statement.transactions.map(statement => ({
-          x: parseFloat(statement.balance),
-          y: parseFloat(statement.amount),
-        })),
-        backgroundColor: 'rgba(255, 99, 132, 0.6)',
-      },
-    ],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'top',
-      },
-      title: {
-        display: true,
-        text: 'Financial Overview',
-      },
-    },
-  };
+    };
+  
+  // ... (keep all chart data preparation and rendering logic)
 
   return (
     <div className="flex flex-col h-screen w-screen bg-gray-900 text-white">
       <Header />
       <div className="flex-grow flex overflow-hidden">
-        {/* Sidebar for tables */}
+        {/* Sidebar for statements */}
         <div className="bg-gray-800 p-4 w-1/4 overflow-y-auto">
           <h2 className="text-xl font-bold mb-4">Statements</h2>
-          <ul>
           {data && data.statements.length > 0 && (
-              <ul>
-                {data.statements.map((statement, index) => (
-                  <li
-                    key={statement._id}
-                    onClick={() => setSelectedStatementId(statement._id)}
-                    className={`cursor-pointer p-2 rounded mb-2 ${
-                      selectedStatementId === statement._id
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-700 text-gray-200'
-                    }`}
-                  >
-                    Statement {index + 1}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </ul>
+            <ul>
+              {data.statements.map((statement, index) => (
+                <li
+                  key={statement._id}
+                  onClick={() => setSelectedStatementId(statement._id)}
+                  className={`cursor-pointer p-2 rounded mb-2 ${
+                    selectedStatementId === statement._id
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-700 text-gray-200'
+                  }`}
+                >
+                  Statement {index + 1}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
-        {/* Main chart area */}
-        <div className="flex-grow p-4 overflow-y-auto">
+        {/* Main content area */}
+        <div className="flex-grow p-4 overflow-y-auto w-3/4">
           {/* Table rendering */}
           <div className="mb-4">
             <h2 className="text-lg font-bold mb-2">Data Table</h2>
+            <button onClick={exportToCSV} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-2">
+              Export CSV
+            </button>
             <table className="min-w-full bg-gray-800 rounded">
               <thead>
                 <tr className="bg-gray-900 text-white">
@@ -478,18 +548,21 @@ checkUnusuallyHighTransactions();
                 </tr>
               </thead>
               <tbody>
-                {selectedTableData.statement.transactions.map((statement, index) => (
+                {selectedTableData && selectedTableData.statement.transactions.map((statement, index) => (
                   <tr key={index} className="bg-gray-800 text-gray-200">
                     <td className="p-2 border">{statement.clientName}</td>
                     <td className="p-2 border">{statement.bankName}</td>
                     <td className="p-2 border">{statement.accountNumber}</td>
-                    <td className="p-2 border">{statement.transactionDate}</td>
+                    <td className="p-2 border">{formatDateToDDMMYYYY(statement.transactionDate)}</td>
                     <td className="p-2 border">{statement.type}</td>
                     <td className="p-2 border">{statement.description}</td>
-                    <td className="p-2 border">${statement.amount}</td>
-                    <td className="p-2 border">${statement.balance}</td>
+                    <td className="p-2 border">${formatNumberWithCommas(statement.amount)}</td>
+                    <td className="p-2 border">${formatNumberWithCommas(statement.balance)}</td>
                     <td className="p-2 border">
-                      <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded">
+                      <button
+                        onClick={() => handleEdit(index)}
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
+                      >
                         Edit
                       </button>
                     </td>
@@ -499,8 +572,104 @@ checkUnusuallyHighTransactions();
             </table>
           </div>
 
+          {/* Edit Form */}
+          {isEditing && (
+            <div className="mb-4 bg-gray-800 p-4 rounded">
+              <h2 className="text-xl font-bold mb-2">Edit Transaction</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block mb-1">Client Name</label>
+                    <input
+                      type="text"
+                      value={editData.clientName || ''}
+                      onChange={(e) => setEditData({ ...editData, clientName: e.target.value })}
+                      className="w-full p-2 bg-gray-700 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">Bank Name</label>
+                    <input
+                      type="text"
+                      value={editData.bankName || ''}
+                      onChange={(e) => setEditData({ ...editData, bankName: e.target.value })}
+                      className="w-full p-2 bg-gray-700 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">Account Number</label>
+                    <input
+                      type="text"
+                      value={editData.accountNumber || ''}
+                      onChange={(e) => setEditData({ ...editData, accountNumber: e.target.value })}
+                      className="w-full p-2 bg-gray-700 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">Transaction Date</label>
+                    <input
+                      type="text"
+                      value={editData.transactionDate || ''}
+                      onChange={(e) => setEditData({ ...editData, transactionDate: e.target.value })}
+                      className="w-full p-2 bg-gray-700 rounded"
+                      placeholder="DD/MM/YYYY"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">Credit/Debit</label>
+                    <input
+                      type="text"
+                      value={editData.type || ''}
+                      onChange={(e) => setEditData({ ...editData, type: e.target.value })}
+                      className="w-full p-2 bg-gray-700 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">Description</label>
+                    <input
+                      type="text"
+                      value={editData.description || ''}
+                      onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                      className="w-full p-2 bg-gray-700 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">Amount ($)</label>
+                    <input
+                      type="text"
+                      value={editData.amount || ''}
+                      onChange={(e) => setEditData({ ...editData, amount: e.target.value })}
+                      className="w-full p-2 bg-gray-700 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">Balance ($)</label>
+                    <input
+                      type="text"
+                      value={editData.balance || ''}
+                      onChange={(e) => setEditData({ ...editData, balance: e.target.value })}
+                      className="w-full p-2 bg-gray-700 rounded"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Update
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
 
-        {/* Display duplicate transactions */}
+          {/* Fraud Detection Sections */}
+              {/* Display duplicate transactions */}
         <div className="mb-4">
           <h2 className="text-lg font-bold mb-2">Duplicate Transactions</h2>
           <h2 className="font-bold">Total Duplicates Found: {totalCount}</h2>
@@ -608,36 +777,47 @@ checkUnusuallyHighTransactions();
           )}
         </div>
 
+          {/* ... (keep all the fraud detection sections like Duplicate Transactions, Multiple Transactions on Same Day, etc.) */}
 
-          {/* Chart rendering */}
-          <div className="mb-4">
-            <h2 className="text-lg font-bold mb-2">Balance Chart</h2>
-            <Bar data={balanceChartData} options={chartOptions} />
-          </div>
-
-          <div className="mb-4">
-            <h2 className="text-lg font-bold mb-2">Credit/Debit Distribution</h2>
-            <Pie data={creditDebitChartData} options={chartOptions} />
-          </div>
-
-          <div className="mb-4">
-            <h2 className="text-lg font-bold mb-2">Transaction Amounts Over Time</h2>
-            <Line data={transactionChartData} options={chartOptions} />
-          </div>
-
-          <div className="mb-4">
-            <h2 className="text-lg font-bold mb-2">Balance Distribution</h2>
-            <Doughnut data={doughnutChartData} options={chartOptions} />
-          </div>
-
-          <div className="mb-4">
-            <h2 className="text-lg font-bold mb-2">Horizontal Bar of Transaction Amounts</h2>
-            <Bar data={horizontalBarData} options={chartOptions} />
-          </div>
-
-          <div className="mb-4">
-            <h2 className="text-lg font-bold mb-2">Scatter Plot - Transaction vs Balance</h2>
-            <Scatter data={scatterData} options={chartOptions} />
+        {/* Display Detected Frauds */}
+<div className="mb-4">
+  <h2 className="text-lg font-bold text-red-500 mb-4">AI Detected Frauds</h2>
+  {fraudGemini ? (
+    <div className="bg-gray-800 p-4 rounded-lg shadow-lg ">
+      <h2 >
+        {fraudGemini}
+      </h2>
+    </div>
+  ) : (
+    <p className="text-gray-400">No Frauds Detected by Gemini</p>
+  )}
+</div>
+{/* Grid for charts */}
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+            <div className="bg-gray-800 p-4 rounded h-full">
+              <h2 className="text-lg font-bold mb-4">Balances by Client</h2>
+              <Bar data={balanceChartData} options={chartOptions} />
+            </div>
+            <div className="bg-gray-800 p-4 rounded h-full">
+              <h2 className="text-lg font-bold mb-4">Credit/Debit Distribution</h2>
+              <Pie data={creditDebitChartData} options={chartOptions} />
+            </div>
+            <div className="bg-gray-800 p-4 rounded h-full">
+              <h2 className="text-lg font-bold mb-4">Transaction Amounts Over Time</h2>
+              <Line data={transactionChartData} options={chartOptions} />
+            </div>
+            <div className="bg-gray-800 p-4 rounded h-full">
+              <h2 className="text-lg font-bold mb-4">Balance Distribution (Doughnut)</h2>
+              <Doughnut data={doughnutChartData} options={chartOptions} />
+            </div>
+            <div className="bg-gray-800 p-4 rounded h-full">
+              <h2 className="text-lg font-bold mb-4">Transaction Amounts (Horizontal Bar)</h2>
+              <Bar data={horizontalBarData} options={{ ...chartOptions, indexAxis: 'y' }} />
+            </div>
+            <div className="bg-gray-800 p-4 rounded h-full">
+              <h2 className="text-lg font-bold mb-4">Transaction Amount vs Balance (Scatter)</h2>
+              <Scatter data={scatterData} options={chartOptions} />
+            </div>
           </div>
         </div>
       </div>
