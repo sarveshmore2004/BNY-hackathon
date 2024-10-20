@@ -32,7 +32,7 @@ const SignIn = () => {
           <div className="text-center lg:text-left lg:pl-[25%]">
             <Link to="/" className="font-bold dark:text-white text-4xl">
               <span className="rounded-lg text-6xl text-red-300">
-                Newsifier
+                AuditEase
               </span>
             </Link>
             <p className="mt-5 text-2xl text-blue-200">
