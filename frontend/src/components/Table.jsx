@@ -22,7 +22,7 @@ function Table({ data, onUpdateData }) {
       { Header: "Bank Name", accessor: "bankName" },
       { Header: "Account Number", accessor: "accountNumber" },
       { Header: "Transaction Date", accessor: "transactionDate" },
-      { Header: "Credit/Debit", accessor: "type" },
+      { Header: "Credit/Debit", accessor: "creditDebit" },
       { Header: "Description", accessor: "description" },
       { Header: "Amount ($)", accessor: "amount" },
       { Header: "Balance ($)", accessor: "balance" },
