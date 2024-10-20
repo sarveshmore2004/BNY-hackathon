@@ -46,7 +46,6 @@ export const getStatements = async (req, res) => {
     // Find all statements for the specific user
     const user = await User.findById(userId).populate({
       path: 'statements',
-      populate: { path: 'transactions' }, // Populate transactions inside the statements
     });
 
     if (!user) {

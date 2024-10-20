@@ -36,7 +36,8 @@ const SignIn = () => {
               </span>
             </Link>
             <p className="mt-5 text-2xl text-blue-200">
-              Stay updated with all the latest news!
+            Making Audits Easier!!!
+
             </p>
           </div>
         </div>
