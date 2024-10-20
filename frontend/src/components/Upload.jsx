@@ -234,7 +234,7 @@ const handleResult = async (result, previousContext) => {
         </div>
       )}
       {error && <p className="text-red-500 mt-4">Error: {error}</p>}
-      {result && <p className="mt-4">Gemini Response: {result}</p>}
+      {/* {result && <p className="mt-4">Gemini Response: {result}</p>} */}
     </div>
   );
 }

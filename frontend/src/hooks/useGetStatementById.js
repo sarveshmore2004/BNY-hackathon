@@ -28,7 +28,7 @@ const useGetStatementById = (id) => {
     }
   }, [id]);
 
-  return { statement, loading, error };
+  return { statement,setStatement, loading, error };
 };
 
 export default useGetStatementById;

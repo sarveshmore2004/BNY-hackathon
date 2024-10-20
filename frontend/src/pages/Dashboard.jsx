@@ -19,6 +19,7 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
+import useUpdateTransaction from "../hooks/useUpdateTransaction";
 
 ChartJS.register(
   CategoryScale,
@@ -60,7 +61,7 @@ const parseNumberFromString = (str) => {
 function Dashboard() {
   const { fetchStatements, loading, error } = useGetAllStatements();
   const [selectedStatementId, setSelectedStatementId] = useState(null);
-  const { statement: selectedTableData, loading: statementLoading, error: statementError } = useGetStatementById(selectedStatementId);
+  const { statement: selectedTableData, setStatement, loading: statementLoading, error: statementError } = useGetStatementById(selectedStatementId);
   const [data, setData] = useState(null);
   const [fraudGemini, setFraudGemini] = useState('');
 
@@ -85,6 +86,10 @@ function Dashboard() {
   const [showMoreSmallTransactions, setShowMoreSmallTransactions] = useState(false);
   const [showMoreHighTransactions, setShowMoreHighTransactions] = useState(false);
 
+
+  const { updateTransaction, loading:updateLoading, error:updateError } = useUpdateTransaction();
+
+
   // Function to handle editing a transaction
   const handleEdit = (index) => {
     setEditIndex(index);
@@ -98,7 +103,7 @@ function Dashboard() {
   };
 
   // Function to handle form submission for editing
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const updatedTransactions = [...selectedTableData.statement.transactions];
     updatedTransactions[editIndex] = {
@@ -108,7 +113,30 @@ function Dashboard() {
       balance: parseNumberFromString(editData.balance),
     };
     // Here you would typically update the state or make an API call to update the data
-    console.log("Updated transaction:", updatedTransactions[editIndex]);
+    try {
+      console.log(editData._id, updatedTransactions[editIndex])
+      const result = await updateTransaction(editData._id, updatedTransactions[editIndex]);
+      console.log("Transaction updated successfully", result);
+
+         // Now update the selectedTableData with the new transactions array
+    const updatedTableData = {
+      ...selectedTableData,  // Copy the original selectedTableData
+      statement: {
+        ...selectedTableData.statement,  // Copy other parts of the statement
+        transactions: updatedTransactions // Set the new updated transactions array
+      }
+    };
+
+    // Use setStatement to update the state with the new data
+    setStatement(updatedTableData);
+    console.log("Updated selectedTableData:", updatedTableData);
+    } catch (err) {
+      console.error("Error updating transaction:", err);
+    }
+    
+    // setStatement({...selectedTableData ,})
+    console.log("Updated transaction:", updatedTransactions);
+    console.log("selectedTableData:", selectedTableData);
     setIsEditing(false);
     setEditIndex(null);
     setEditData({});
@@ -553,7 +581,7 @@ const checkUnusuallyHighTransactions = () => {
                     <td className="p-2 border">{statement.clientName}</td>
                     <td className="p-2 border">{statement.bankName}</td>
                     <td className="p-2 border">{statement.accountNumber}</td>
-                    <td className="p-2 border">{formatDateToDDMMYYYY(statement.transactionDate)}</td>
+                    <td className="p-2 border">{statement.transactionDate}</td>
                     <td className="p-2 border">{statement.type}</td>
                     <td className="p-2 border">{statement.description}</td>
                     <td className="p-2 border">${formatNumberWithCommas(statement.amount)}</td>
