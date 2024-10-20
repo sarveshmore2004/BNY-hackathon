@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useTable } from "react-table";
 import Modal from "react-modal";
 import usePostStatement from "../hooks/usePostStatement"; // Import the usePostStatement hook
@@ -10,7 +10,7 @@ function Table({ data, onUpdateData }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editRowIndex, setEditRowIndex] = useState(null);
   const [editRowData, setEditRowData] = useState({});
-  const [accuracy, setAccuracy] = useState(0); // State for accuracy input
+  const [accuracy, setAccuracy] = useState(0); // State for calculated accuracy
 
   // Using the usePostStatement hook
   const { postStatement, loading: postingLoading, error: postingError } = usePostStatement();
@@ -75,7 +75,7 @@ function Table({ data, onUpdateData }) {
 
   // Function to save the statement
   const handleSaveStatement = async () => {
-    console.log(data , accuracy)
+    console.log(data, accuracy);
     const response = await postStatement(data, accuracy);
     if (response) {
       console.log("Statement saved successfully:", response);
@@ -85,11 +85,11 @@ function Table({ data, onUpdateData }) {
   // Function to export table data to CSV
   const exportToCSV = () => {
     const csvRows = [];
-    const headers = columns.map(column => column.Header);
+    const headers = columns.map((column) => column.Header);
     csvRows.push(headers.join(','));
 
-    data.forEach(row => {
-      const values = columns.map(column => {
+    data.forEach((row) => {
+      const values = columns.map((column) => {
         const value = row[column.accessor];
         return `"${value}"`;
       });
@@ -107,6 +107,42 @@ function Table({ data, onUpdateData }) {
     link.click();
     document.body.removeChild(link);
   };
+
+// Function to calculate accuracy
+useEffect(() => {
+  let correctCount = 0;
+  let totalCount = 0;
+
+  data.forEach((row, index) => {
+    if (
+      row.balance != null &&
+      row.amount != null &&
+      data[index - 1]?.balance != null // Use previous row's balance
+    ) {
+      const previousBalance = parseFloat(data[index - 1].balance);
+      const amount = parseFloat(row.amount);
+
+      // Calculate expected balance for current row based on previous balance
+      const expectedBalance =
+        row.creditDebit === "Credit"
+          ? previousBalance + amount
+          : previousBalance - amount;
+
+      // Compare the expected balance with the actual balance
+      if (Math.abs(expectedBalance - parseFloat(row.balance)) < 0.01) {
+        correctCount++;
+      }
+      totalCount++;
+    }
+  });
+
+  if (totalCount > 0) {
+    setAccuracy(((correctCount / totalCount) * 100).toFixed(2)); // Calculate accuracy percentage
+  } else {
+    setAccuracy(100); // If no rows to compare, assume 100% accuracy
+  }
+}, [data]);
+
 
   return (
     <div className="mt-10 w-[90vw] bg-gray-800 p-6 rounded-lg shadow-lg overflow-x-auto">
@@ -158,15 +194,9 @@ function Table({ data, onUpdateData }) {
         </div>
       )}
 
-      {/* Accuracy Input */}
+      {/* Display Accuracy */}
       <div className="flex justify-end mt-4">
-        <input
-          type="number"
-          placeholder="Accuracy (%)"
-          value={accuracy}
-          onChange={(e) => setAccuracy(e.target.value)}
-          className="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 text-white"
-        />
+        <p className="text-gray-200">Accuracy: {accuracy}%</p>
         <button
           onClick={handleSaveStatement}
           className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-200 ml-2"
@@ -222,4 +252,3 @@ function Table({ data, onUpdateData }) {
 }
 
 export default Table;
- 
