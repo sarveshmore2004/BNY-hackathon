@@ -1,4 +1,4 @@
-# BIC Bank Audit Automation
+#Bank Audit Automation
 
 ## Table of Contents
 
@@ -8,7 +8,7 @@
 
 ## Project Overview
 
-BIC Bank aims to automate the audit request process for financial statements using Machine Learning (ML) and Artificial Intelligence (AI). The project focuses on:
+Bank aims to automate the audit request process for financial statements using Machine Learning (ML) and Artificial Intelligence (AI). The project focuses on:
 
 - Extracting data from bank statements.
 - Presenting the data in a user-friendly manner.
